@@ -1,0 +1,8 @@
+streamlit
+pandas
+plotly
+gspread
+google-auth
+requests
+Pillow
+XlsxWriter
