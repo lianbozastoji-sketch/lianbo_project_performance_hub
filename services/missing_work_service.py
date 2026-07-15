@@ -1,0 +1,145 @@
+from __future__ import annotations
+
+import re
+import unicodedata
+from dataclasses import dataclass
+from typing import Callable
+
+import pandas as pd
+
+RESULT_COLUMNS = [
+    "Godina",
+    "Mesec",
+    "Missing Entries",
+    "Justified Missing Entries",
+    "Unjustified Missing Entries",
+    "Penalty Points",
+    "Penalty Details",
+]
+
+
+@dataclass(frozen=True)
+class MissingPenaltyResult:
+    monthly: pd.DataFrame
+    debug: dict
+
+
+def normalize_name(value: object) -> str:
+    text = unicodedata.normalize("NFKD", str(value or "").strip())
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "", text.casefold())
+
+
+def normalize_technician_id(value: object) -> str:
+    raw = str(value or "").strip().upper()
+    compact = re.sub(r"[^A-Z0-9]+", "", raw)
+    match = re.search(r"TECH(\d+)", compact)
+    if match:
+        return f"TECH-{int(match.group(1)):06d}"
+    return raw
+
+
+def canonicalize_missing_work_frame(raw: pd.DataFrame) -> pd.DataFrame:
+    expected = ["Timestamp", "Technician_ID", "Technician_Name", "Missing_Date", "Note"]
+    if raw is None or raw.empty:
+        return pd.DataFrame(columns=expected + ["Technician_ID_Norm", "Technician_Name_Norm", "Missing_Date_Parsed"])
+
+    def key(value: object) -> str:
+        return re.sub(r"[^a-z0-9]+", "", str(value or "").replace("\ufeff", "").replace("\u200b", "").strip().lower())
+
+    aliases = {
+        "timestamp": "Timestamp",
+        "technicianid": "Technician_ID",
+        "technicianname": "Technician_Name",
+        "techniciannam": "Technician_Name",
+        "technician": "Technician_Name",
+        "missingdate": "Missing_Date",
+        "date": "Missing_Date",
+        "note": "Note",
+        "notes": "Note",
+    }
+    df = raw.copy()
+    df = df.rename(columns={c: aliases[key(c)] for c in df.columns if key(c) in aliases})
+    for column in expected:
+        if column not in df.columns:
+            df[column] = ""
+    df = df[expected].copy()
+    for column in expected:
+        df[column] = df[column].fillna("").astype(str).replace({"nan": "", "None": ""}).str.strip()
+    df["Technician_ID_Norm"] = df["Technician_ID"].map(normalize_technician_id)
+    df["Technician_Name_Norm"] = df["Technician_Name"].map(normalize_name)
+    df["Missing_Date_Parsed"] = pd.to_datetime(df["Missing_Date"], dayfirst=True, errors="coerce").dt.normalize()
+    return df
+
+
+def calculate_monthly_penalty(
+    raw: pd.DataFrame,
+    technician_name: str,
+    technician_id: str,
+    *,
+    is_weekend: Callable[[object], bool],
+    supervisor: bool = False,
+) -> MissingPenaltyResult:
+    empty = pd.DataFrame(columns=RESULT_COLUMNS)
+    selected_name = str(technician_name or "").strip()
+    selected_id = normalize_technician_id(technician_id)
+    debug = {
+        "technician": selected_name,
+        "technician_id": selected_id,
+        "source_rows": 0,
+        "matched_rows_before_date_filter": 0,
+        "matched_rows": 0,
+        "months": 0,
+        "supervisor": bool(supervisor),
+    }
+    if supervisor:
+        return MissingPenaltyResult(empty, debug)
+
+    df = canonicalize_missing_work_frame(raw)
+    debug["source_rows"] = int(len(df))
+    if df.empty:
+        return MissingPenaltyResult(empty, debug)
+
+    name_norm = normalize_name(selected_name)
+    id_match = df["Technician_ID_Norm"].eq(selected_id) if selected_id else pd.Series(False, index=df.index)
+    name_match = df["Technician_Name_Norm"].eq(name_norm)
+    selected = df[id_match | name_match].copy()
+    debug["matched_rows_before_date_filter"] = int(len(selected))
+    selected = selected[selected["Missing_Date_Parsed"].notna()].copy()
+    if selected.empty:
+        return MissingPenaltyResult(empty, debug)
+
+    selected = selected[~selected["Missing_Date_Parsed"].map(is_weekend)].copy()
+    selected["_order"] = range(len(selected))
+    dedupe_keys = ["Missing_Date_Parsed"]
+    if selected_id:
+        dedupe_keys.insert(0, "Technician_ID_Norm")
+    else:
+        dedupe_keys.insert(0, "Technician_Name_Norm")
+    selected = selected.sort_values("_order").drop_duplicates(subset=dedupe_keys, keep="last")
+    debug["matched_rows"] = int(len(selected))
+
+    selected["Justified"] = selected["Note"].str.strip().ne("")
+    selected["Unjustified"] = ~selected["Justified"]
+    selected["Godina"] = selected["Missing_Date_Parsed"].dt.year.astype(int)
+    selected["Mesec"] = selected["Missing_Date_Parsed"].dt.month.astype(int)
+
+    monthly = selected.groupby(["Godina", "Mesec"], as_index=False).agg(
+        Missing_Entries=("Missing_Date_Parsed", "count"),
+        Justified_Missing_Entries=("Justified", "sum"),
+        Unjustified_Missing_Entries=("Unjustified", "sum"),
+    )
+    monthly["Penalty Points"] = monthly["Unjustified_Missing_Entries"].apply(
+        lambda n: min(int(n), 5) * 0.5 + max(int(n) - 5, 0) * 1.0
+    )
+    monthly["Penalty Details"] = monthly.apply(
+        lambda row: f"{int(row['Unjustified_Missing_Entries'])} unjustified / {int(row['Justified_Missing_Entries'])} justified",
+        axis=1,
+    )
+    monthly = monthly.rename(columns={
+        "Missing_Entries": "Missing Entries",
+        "Justified_Missing_Entries": "Justified Missing Entries",
+        "Unjustified_Missing_Entries": "Unjustified Missing Entries",
+    })
+    debug["months"] = int(len(monthly))
+    return MissingPenaltyResult(monthly[RESULT_COLUMNS].copy(), debug)
