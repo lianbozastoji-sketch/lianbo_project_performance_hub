@@ -1,0 +1,42 @@
+name: Wake Streamlit and run alerts
+
+on:
+  schedule:
+    # Every 15 minutes, Monday-Friday, during Serbia business/extended hours.
+    # UTC 05:00-20:59 covers 06/07:00 through 21/22:00 in Europe/Belgrade.
+    - cron: "*/15 5-20 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lianbo-streamlit-alert-wake
+  cancel-in-progress: true
+
+jobs:
+  wake-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install browser automation
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.52.0
+          playwright install --with-deps chromium
+      - name: Wake Streamlit and execute checks
+        env:
+          STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
+        run: python wake_streamlit.py
+      - name: Upload diagnostic screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamlit-wake-${{ github.run_number }}
+          path: streamlit_wake_result.png
+          if-no-files-found: ignore
+          retention-days: 3
