@@ -1,0 +1,39 @@
+name: Wake Streamlit and run alerts
+
+"on":
+  schedule:
+    # Run every day so the overnight/weekend inactivity gap never exceeds the
+    # Community Cloud sleep window. Offset minutes avoid top-of-hour congestion.
+    - cron: "7,22,37,52 5-20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lianbo-streamlit-alert-wake
+  cancel-in-progress: false
+
+jobs:
+  wake-app:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright/python:v1.52.0-noble
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser automation
+        run: |
+          pip install playwright==1.52.0
+      - name: Wake Streamlit and execute checks
+        env:
+          STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
+          PYTHONUNBUFFERED: "1"
+        run: python wake_streamlit.py
+      - name: Upload diagnostic screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamlit-wake-${{ github.run_number }}
+          path: streamlit_wake_result.png
+          if-no-files-found: ignore
+          retention-days: 7
