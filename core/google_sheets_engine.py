@@ -27,9 +27,9 @@ class GoogleSheetsEngine:
     def __init__(
         self,
         *,
-        ttl_seconds: int = 180,
-        stale_seconds: int = 1800,
-        min_request_interval: float = 1.10,
+        ttl_seconds: int = 300,
+        stale_seconds: int = 3600,
+        min_request_interval: float = 0.35,
     ) -> None:
         self.ttl_seconds = max(int(ttl_seconds), 1)
         self.stale_seconds = max(int(stale_seconds), self.ttl_seconds)

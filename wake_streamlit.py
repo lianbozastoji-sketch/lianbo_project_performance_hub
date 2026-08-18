@@ -4,7 +4,7 @@ import os
 import re
 import sys
 import time
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from playwright.sync_api import sync_playwright
 
@@ -28,6 +28,17 @@ def normalize_url(value: str) -> str:
     if not parsed.netloc:
         raise ValueError(f"Invalid STREAMLIT_APP_URL: {value!r}")
     return url.rstrip("/")
+
+
+def automation_url(value: str) -> str:
+    """Open the lightweight background route instead of the normal user interface."""
+    parsed = urlparse(normalize_url(value))
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query["automation"] = "1"
+    token = os.environ.get("AUTOMATION_TOKEN", "").strip()
+    if token:
+        query["token"] = token
+    return urlunparse(parsed._replace(query=urlencode(query)))
 
 
 def try_click_wake_button(page) -> bool:
@@ -100,7 +111,7 @@ def save_diagnostics(page) -> None:
 
 def main() -> int:
     try:
-        app_url = normalize_url(os.environ.get("STREAMLIT_APP_URL", ""))
+        app_url = automation_url(os.environ.get("STREAMLIT_APP_URL", ""))
     except ValueError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
