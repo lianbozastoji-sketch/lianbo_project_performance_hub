@@ -1,6 +1,6 @@
 # Lianbo Project Performance Hub
 
-Complete replacement package — version `v9.3_turbo_shifts_user_permissions`, built directly on the complete v9.2 package.
+Complete replacement package — version `v9.4.2_oee_iwon_shift_selection_work_ticket_times`, built on the verified v9.4.1 OEE IWON package.
 
 This package keeps the existing Google Sheets databases and application functions. Replacing the GitHub code does not delete Google Sheets records.
 
@@ -8,12 +8,12 @@ This package keeps the existing Google Sheets databases and application function
 
 - Main Streamlit application with KPI, Work Tickets/Kanban, BN, OEE, Line Verification and Admin modules.
 - OEE input by exact shift: `1st shift (06:00-14:00)`, `2nd shift (14:00-22:00)`, `3rd shift (22:00-06:00)` or `All shifts`.
-- `All shifts` asks for 1, 2 or 3 shifts; Open time and Target are calculated from `MASTER_DATA / 1 shift`.
+- When `All shifts` is selected, the app opens a horizontal multi-select for `1st`, `2nd`, `3rd`. Choose two or all three; Open time and Target are calculated from the selected shifts. The selection is stored in `OEE_input / Included_Shifts`.
 - Daily/weekly/monthly/yearly OEE is calculated from summed raw shift data, not from an average of shift percentages.
 - Per-user View/Edit overrides for every main application tab, independent of the user's role.
 - Per-user e-mail notification switches for tasks, reminders, missing work time and BN alerts.
 - `Technician_ID` as the primary link between Users, Technicians, Tasks and Task Activity.
-- Technician-only Work Ticket visibility; admins/managers retain full access.
+- Technician-only Work Ticket visibility; admins/managers retain full access. Completed Kanban cards show task Start and Finish timestamps next to the duration information.
 - Central Google Sheets cache, rate limiting, retry and stale-data fallback.
 - Central SMTP service and `EMAIL_LOG` audit worksheet.
 - Automatic weekday checks:
@@ -28,11 +28,11 @@ This package keeps the existing Google Sheets databases and application function
 
 Do not delete the GitHub repository itself. Delete/replace only its files. Deleting the repository also deletes the `STREAMLIT_APP_URL` Action secret and can break the existing Streamlit deployment connection.
 
-1. Extract `Lianbo_Project_Performance_Hub_COMPLETE_v9_3.zip` on the computer.
+1. Extract `LianBo_Project_Performance_Hub_v9.4.2.zip` on the computer.
 2. Open the existing GitHub repository on branch `main`.
 3. Remove the old repository files, but keep the repository itself.
 4. Choose **Add file -> Upload files**.
-5. Drag the contents inside the extracted `Lianbo_Project_Performance_Hub_COMPLETE` folder. Do not upload the ZIP itself and do not add an extra outer folder.
+5. Drag the extracted repository contents. Do not upload the ZIP itself and do not add an extra outer folder.
 6. Confirm that `.github/workflows/wake_streamlit.yml` exists in exactly that path.
 7. Commit directly to `main`.
 
