@@ -49,6 +49,7 @@ class OeeShiftTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ns = load_symbols({
+            "_oee_included_shifts_text",
             "build_oee_row",
             "calculate_oee_metrics",
             "aggregate_oee",
@@ -60,12 +61,13 @@ class OeeShiftTests(unittest.TestCase):
     def test_individual_and_all_shift_open_time(self):
         build = self.ns["build_oee_row"]
         one = build("2026-08-18", "P", "Proc", "M", 30, 1000, 480, 1, 900, 100, 30, 10, "Tester", "1st shift (06:00-14:00)")
-        all_three = build("2026-08-18", "P", "Proc", "M", 30, 1000, 480, 3, 2700, 300, 90, 30, "Tester", "All shifts")
+        all_three = build("2026-08-18", "P", "Proc", "M", 30, 1000, 480, 3, 2700, 300, 90, 30, "Tester", "All shifts", ["1st", "2nd", "3rd"])
         self.assertEqual(one[7], 480)
         self.assertEqual(one[14], 1000)
         self.assertEqual(one[16], "1st shift (06:00-14:00)")
         self.assertEqual(all_three[7], 1440)
         self.assertEqual(all_three[14], 3000)
+        self.assertEqual(all_three[17], "1st | 2nd | 3rd")
 
     def test_daily_oee_is_calculated_from_summed_raw_shift_data(self):
         raw = pd.DataFrame([
@@ -97,13 +99,13 @@ class OeeShiftTests(unittest.TestCase):
         self.assertEqual(third["conflicts"], [])
         self.assertEqual(len(combined["conflicts"]), 2)
 
-    def test_legacy_oee_header_gets_shift_column_without_row_rewrite(self):
+    def test_v941_oee_header_gets_included_shifts_without_row_rewrite(self):
         legacy_headers = self.ns["OEE_INPUT_COLUMNS"][:-1]
         ws = HeaderWorksheet([legacy_headers, ["18.08.2026", "34", "Tuesday"]])
         returned = self.ns["ensure_oee_input_columns"](ws)
-        self.assertEqual(returned[-1], "Shift")
+        self.assertEqual(returned[-2:], ["Shift", "Included_Shifts"])
         self.assertEqual(len(ws.updates), 1)
-        self.assertEqual(ws.updates[0][0], "A1:Q1")
+        self.assertEqual(ws.updates[0][0], "A1:R1")
         self.assertEqual(ws.values[1], ["18.08.2026", "34", "Tuesday"])
 
 
