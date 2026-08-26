@@ -94,7 +94,7 @@ OEE_MASTER_SHEET_NAMES = ["MASTER_DATA", "MASTER DATA", "Master Data"]
 
 # OEE IWON (Improved Weekly OEE Necessary) planning database.
 # This is intentionally separate from the real OEE database: IWON is a management target scenario.
-OEE_IWON_SHEET_ID = "1Q2V7VZISfDH3ZAb80j5hoprDkaWyRuS9COV7wzDqVnw"
+OEE_IWON_SHEET_ID = "1Q2V7VZlSfDH3ZAb80j5hoprDkaWyRuS9COV7wzDqVnw"
 OEE_IWON_TARGET_SHEET_NAMES = ["Admin podešavanja", "OEE_IWON_TARGETS", "Admin podesavanja"]
 OEE_IWON_RESULT_SHEET_NAMES = ["OEE_IWON"]
 OEE_IWON_TARGET_COLUMNS = ["Year", "CW", "Project", "Process", "Target_OEE", "Updated_By", "Updated_At"]
@@ -7373,11 +7373,10 @@ def render_administration_module():
                     st.dataframe(
                         refreshed.sort_values("CW"), use_container_width=True, hide_index=True
                     )
-        except Exception as e:
+        except Exception:
             st.error(
-                "OEE IWON nije mogao da pristupi podacima. Proveri Google Sheet share/kolone i OEE podatke."
+                "OEE IWON nije mogao da pristupi Google Sheet-u. Proveri da li je IWON spreadsheet podeljen sa service account-om i pokušaj ponovo."
             )
-            st.write(e)
 
 def recalculate_enva_for_technician_day(assigned_to, start_date_value):
     """Recalculate effective minutes for all completed activities for one technician/day.
