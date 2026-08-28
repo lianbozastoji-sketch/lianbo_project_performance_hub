@@ -1,6 +1,6 @@
 # Lianbo Project Performance Hub
 
-Complete replacement package — version `v9.4.2_oee_iwon_shift_selection_work_ticket_times`, built on the verified v9.4.1 OEE IWON package.
+Complete replacement package — version `v9.4.8_machine_oee_clean_time`, built on the verified v9.4.3 OEE IWON package.
 
 This package keeps the existing Google Sheets databases and application functions. Replacing the GitHub code does not delete Google Sheets records.
 
@@ -28,7 +28,7 @@ This package keeps the existing Google Sheets databases and application function
 
 Do not delete the GitHub repository itself. Delete/replace only its files. Deleting the repository also deletes the `STREAMLIT_APP_URL` Action secret and can break the existing Streamlit deployment connection.
 
-1. Extract `LianBo_Project_Performance_Hub_v9.4.2.zip` on the computer.
+1. Extract `LianBo_Project_Performance_Hub_v9.4.8.zip` on the computer.
 2. Open the existing GitHub repository on branch `main`.
 3. Remove the old repository files, but keep the repository itself.
 4. Choose **Add file -> Upload files**.
