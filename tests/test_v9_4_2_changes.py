@@ -42,11 +42,12 @@ class OeeAllShiftSelectionTests(unittest.TestCase):
         self.assertEqual(row[14], 2000.0)
         self.assertEqual(row[17], "1st | 3rd")
 
-    def test_old_shift_count_input_removed_and_multi_pills_added(self):
+    def test_old_shift_count_input_removed_and_toggle_buttons_added(self):
         self.assertNotIn("How many shifts are included?", SOURCE_TEXT)
-        self.assertIn('st.pills(', SOURCE_TEXT)
-        self.assertIn('selection_mode="multi"', SOURCE_TEXT)
-        self.assertIn('["1st", "2nd", "3rd"]', SOURCE_TEXT)
+        self.assertNotIn('st.pills(', SOURCE_TEXT)
+        self.assertIn('shift_order = ["1st", "2nd", "3rd"]', SOURCE_TEXT)
+        self.assertIn('state_key = "oee_included_shift_buttons"', SOURCE_TEXT)
+        self.assertIn('key=shift_button_keys[shift_name]', SOURCE_TEXT)
 
 
 class WorkTicketTimestampTests(unittest.TestCase):
