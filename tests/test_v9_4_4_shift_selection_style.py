@@ -9,7 +9,7 @@ class TestOeeShiftSelectionStyle(unittest.TestCase):
     def test_selected_oee_shift_has_state_driven_red_glow_css(self):
         source = APP.read_text(encoding="utf-8")
 
-        self.assertIn('APP_VERSION = "v9.4.8_machine_oee_clean_time"', source)
+        self.assertIn('APP_VERSION = "v9.4.9_weighted_period_oee"', source)
         self.assertIn('state_key = "oee_included_shift_buttons"', source)
         self.assertIn('"1st": "oee_shift_toggle_1st"', source)
         self.assertIn('"2nd": "oee_shift_toggle_2nd"', source)
