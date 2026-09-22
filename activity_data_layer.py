@@ -42,8 +42,21 @@ def stable_id(prefix: str, *parts) -> str:
     return f"{prefix}-{hashlib.sha1(payload.encode('utf-8')).hexdigest()[:20]}"
 
 
+def _parse_mixed_datetime(value):
+    if isinstance(value, (pd.Timestamp, datetime)):
+        return pd.Timestamp(value)
+    text = _clean(value)
+    if not text:
+        return pd.NaT
+    if re.match(r"^\d{4}-\d{1,2}-\d{1,2}(?:[T\s].*)?$", text):
+        return pd.to_datetime(text, yearfirst=True, dayfirst=False, errors="coerce")
+    if re.match(r"^\d{1,2}[./]\d{1,2}[./]\d{4}(?:[T\s].*)?$", text):
+        return pd.to_datetime(text, yearfirst=False, dayfirst=True, errors="coerce")
+    return pd.to_datetime(text, errors="coerce")
+
+
 def _date_text(value) -> str:
-    dt = pd.to_datetime(value, dayfirst=True, errors="coerce")
+    dt = _parse_mixed_datetime(value)
     return "" if pd.isna(dt) else dt.strftime("%d.%m.%Y")
 
 
@@ -108,7 +121,7 @@ def normalize_forms_rows(forms_df: pd.DataFrame, technicians: pd.DataFrame, impo
 
     rows: List[dict] = []
     unmapped = set()
-    for idx, row in forms_df.iterrows():
+    for _, row in forms_df.iterrows():
         name = _clean(row.get(technician_col, ""))
         tech_id = maps["name_to_id"].get(normalize_key(name), "") or maps["username_to_id"].get(normalize_key(name), "")
         if name and not tech_id:
@@ -119,7 +132,9 @@ def normalize_forms_rows(forms_df: pd.DataFrame, technicians: pd.DataFrame, impo
         if not all([name, work_date, start, end]):
             continue
         ts = _clean(row.get(timestamp_col, "")) if timestamp_col else ""
-        source_id = stable_id("FORM", ts, name, work_date, start, end, row.get(title_col, ""), idx)
+        # A sheet row number is not an identity: inserting/deleting another response
+        # must not make an already imported activity look new.
+        source_id = stable_id("FORM", ts, name, work_date, start, end, row.get(title_col, ""))
         start_dt = pd.to_datetime(f"{work_date} {start}", dayfirst=True, errors="coerce")
         end_dt = pd.to_datetime(f"{work_date} {end}", dayfirst=True, errors="coerce")
         duration = 0.0
@@ -143,7 +158,7 @@ def normalize_app_rows(activity_df: pd.DataFrame, technicians: pd.DataFrame, imp
         return [], []
     maps = build_technician_maps(technicians)
     rows: List[dict] = []
-    for idx, row in activity_df.iterrows():
+    for _, row in activity_df.iterrows():
         tech_id = _clean(row.get("Assigned_Technician_ID", "")).upper()
         name = _clean(row.get("Assigned_To", ""))
         if not tech_id:
@@ -159,9 +174,14 @@ def normalize_app_rows(activity_df: pd.DataFrame, technicians: pd.DataFrame, imp
         effective = _number(row.get("Effective_Duration", calc), calc)
         task_title = _clean(row.get("Task_Title", ""))
         task_id = _clean(row.get("Task_ID", ""))
-        source_id = stable_id("APP", tech_id, name, task_id, task_title, work_date, start, end, calc, idx)
+        activity_id = _clean(row.get("Activity_ID", ""))
+        source_id = (
+            stable_id("APP", activity_id)
+            if activity_id
+            else stable_id("APP", tech_id, name, task_id, task_title, work_date, start, end, calc)
+        )
         rows.append({
-            "Activity_ID": stable_id("ACT", source_id), "Source": "APP", "Source_ID": source_id,
+            "Activity_ID": activity_id or stable_id("ACT", source_id), "Source": "APP", "Source_ID": source_id,
             "Technician_ID": tech_id, "Technician_Name": name, "Work_Date": work_date,
             "Start_Time": start, "End_Time": end, "Calculated_Duration": calc,
             "Effective_Duration": effective, "Process": _clean(row.get("Process", "")),
