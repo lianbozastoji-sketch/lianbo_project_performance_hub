@@ -17,7 +17,7 @@ concurrency:
 jobs:
   wake-app:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 16
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,6 +40,9 @@ jobs:
       - name: Wake Streamlit and execute checks
         env:
           STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
+          # Optional. When AUTOMATION_TOKEN is set in Streamlit Secrets it must
+          # also be set here, otherwise the background route is rejected.
+          AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
         run: python wake_streamlit.py
       - name: Upload diagnostic screenshot
         if: always()
