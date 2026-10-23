@@ -239,6 +239,10 @@ def run(clicks=(), values=None, state=None):
     H.log = []
     H.clicks = set(clicks)
     H.label_values = dict(values or {})
+    if state and "kpi_selected_tab" in state:
+        # emulate the user clicking the KPI page: reset the two-level nav widgets
+        for key in [k for k in H.session_state if k == "kpi_section_radio" or k.startswith("kpi_page_radio_")]:
+            H.session_state.pop(key, None)
     for key, value in (state or {}).items():
         H.session_state[key] = value
     result = st.run_script(APP)
@@ -399,6 +403,10 @@ def scenario_kpi_sees_everything():
         values = {"kpi_eval_technician": "Bojan Nikolić", "daily_technician_view": "Bojan Nikolić",
                   "kpi_selected_compare_techs": ["Bojan Nikolić", "Đorđe Đorđević"]}
         no_crash(f"KPI tab '{tab}' renders", run(state=state, values=values))
+        check(f"KPI navigation opened '{tab}'", H.session_state.get("kpi_selected_tab") == tab, H.session_state.get("kpi_selected_tab"))
+        expected_chart = {"Pareto": "kpi_pareto_hours", "Kategorije": "kpi_category_pie", "Dashboard": "kpi_dashboard_hours"}.get(tab)
+        if expected_chart:
+            check(f"KPI '{tab}' shows its chart", expected_chart in H.messages("chart"), H.messages("chart"))
 
 
 def scenario_oee():
@@ -420,6 +428,182 @@ def scenario_oee():
     check("OEE update replaced the row (no duplicate)", len(data) == 1 and str(data[0][9]) in ("810", "810.0"), data)
     for page in ["Dashboard", "Daily", "Weekly", "Monthly", "Yearly", "Machine Ranking", "Raw Data"]:
         no_crash(f"OEE page '{page}' renders", run(state={"selected_module": "OEE", "oee_page_selector": page}))
+
+
+OEE_DRILL_ROWS = [
+    # Datum, Machine, CT_s, open, down, org, ok, nok, target
+    ("19.10.2026", "RL 1", 30, 440, 30, 10, 700, 20, 760),
+    ("19.10.2026", "RL 2", 28, 440, 60, 0, 650, 30, 800),
+    ("20.10.2026", "RL 1", 30, 440, 15, 0, 800, 10, 850),
+    ("22.10.2026", "RL 1", 30, 440, 0, 0, 159, 8, 167),
+    ("14.10.2026", "RL 1", 30, 440, 20, 5, 780, 12, 830),
+    ("15.09.2026", "RL 1", 30, 440, 40, 0, 700, 50, 840),
+]
+
+
+def _click_chart(key, x, customdata=None, y=None):
+    point = {"x": x, "y": y, "point_index": 0, "curve_number": 0}
+    if customdata is not None:
+        point["customdata"] = customdata
+    H.session_state.update({key: {"selection": {"points": [point], "point_indices": [0], "box": [], "lasso": []}}})
+
+
+def _drill_cards():
+    return [m for m in H.messages("markdown") if 'class="drill-card"' in m]
+
+
+def scenario_oee_drilldown():
+    global run
+    base_run = run
+    seen_alerts = []
+
+    def run(*args, **kwargs):  # noqa: F811  (collect every error/warning shown on OEE pages)
+        outcome = base_run(*args, **kwargs)
+        seen_alerts.extend(("error", m) for m in H.messages("error"))
+        seen_alerts.extend(("warning", m) for m in H.messages("warning"))
+        return outcome
+
+    try:
+        _scenario_oee_drilldown_body()
+    finally:
+        run = base_run
+    check("No error or warning shown on any OEE page during drill-down", not seen_alerts, seen_alerts[:6])
+
+
+def _scenario_oee_drilldown_body():
+    from plotly import _dummy as plotly_fake
+    problems_before = len(plotly_fake.PROBLEMS)
+    ws = sheet(OEE, "OEE_input")
+    ws.append_rows([
+        [d, "", "", "APP350", "Inspection Rotor", m, ct, op, 1, ok, nok, ok + nok, down, org, target, "sim", "All shifts", ""]
+        for d, m, ct, op, down, org, ok, nok, target in OEE_DRILL_ROWS
+    ])
+    g = app()
+    g["load_oee_input"].clear()
+    login("admin", "admin123")
+    df = app()["load_oee_input"]()[0]
+    df = df[df["Datum"] >= pd.Timestamp(2026, 9, 1)]
+    df = df[df["Datum"] <= pd.Timestamp(2026, 10, 31)]
+    g = app()
+
+    # --- calendar slots ------------------------------------------------------
+    week = df[(df["Godina"] == 2026) & (df["Week"] == 43)]
+    _, slots = g["oee_period_slots"](week, "day")
+    check("Weekly chart shows the whole CW (Mon-Sun) incl. days without entries",
+          [x["label"] for x in slots] == ["Pon 19.10", "Uto 20.10", "Sre 21.10", "Čet 22.10", "Pet 23.10", "Sub 24.10", "Ned 25.10"]
+          and [x["has"] for x in slots] == [True, True, False, True, False, False, False], [(x["label"], x["has"]) for x in slots])
+    october = df[df["Mesec"] == 10]
+    _, slots = g["oee_period_slots"](october, "week")
+    check("Monthly chart shows every week of the month", [x["label"] for x in slots] == ["CW40", "CW41", "CW42", "CW43", "CW44"],
+          [x["label"] for x in slots])
+    _, slots = g["oee_period_slots"](df, "month")
+    check("Yearly chart shows all 12 months", len(slots) == 12 and [x["has"] for x in slots][8:10] == [True, True],
+          [(x["label"], x["has"]) for x in slots])
+
+    # --- card numbers (checked against hand calculation) ---------------------
+    day = df[df["Datum"] == pd.Timestamp(2026, 10, 19)]
+    card = g["oee_detail_card_data"](day, "a", "Machine_OEE_CT_%")
+    raw = card["raw"]
+    expected_a = (880 - 90 - 10) / (880 - 10) * 100
+    check("Availability card: downtime 90 min, org. loss 10 min, run 780 min",
+          (raw["down"], raw["org"], raw["run"]) == (90, 10, 780) and abs(card["value"] - expected_a) < 1e-6, raw)
+    check("Availability card names the machine with most lost time first",
+          [m for m, _, _ in card["impact"]][:2] == ["RL 2", "RL 1"], card["impact"])
+    card_q = g["oee_detail_card_data"](day, "q", "Machine_OEE_CT_%")
+    check("Quality card: OK 1350, NOK 50, total 1400",
+          (card_q["raw"]["ok"], card_q["raw"]["nok"], card_q["raw"]["total"]) == (1350, 50, 1400)
+          and abs(card_q["value"] - 1350 / 1400 * 100) < 1e-6 and card_q["impact"][0][0] == "RL 2", card_q["raw"])
+    card_p = g["oee_detail_card_data"](day, "p", "Machine_OEE_CT_%")
+    ideal = 720 * 30 / 60 + 680 * 28 / 60
+    check("Performance card: total 1400 vs target 1560 (-160), CT performance = ideal/run",
+          card_p["tiles"][0]["value"] == "1.400" and card_p["tiles"][1]["value"] == "1.560"
+          and card_p["tiles"][2]["value"] == "-160 kom" and abs(card_p["value"] - ideal / 780 * 100) < 1e-6, card_p["tiles"])
+    card_o = g["oee_detail_card_data"](day, "oee", "Machine_OEE_CT_%")
+    check("OEE card = A x P x Q", abs(card_o["value"] - card_o["raw"]["a"] * card_o["raw"]["p"] * card_o["raw"]["q"] / 10000) < 1e-6,
+          card_o["raw"])
+    card_pt = g["oee_detail_card_data"](day, "p", "Machine_OEE_Target_%")
+    check("Target variant: performance = OK / target", abs(card_pt["value"] - 1350 / 1560 * 100) < 1e-6, card_pt["formula"])
+
+    # --- Weekly page: click a day -> card -> drill into Daily -> back --------
+    weekly = {"selected_module": "OEE", "oee_page_selector": "Weekly", "oee_weekly_selected_week": (2026, 43)}
+    outcome = run(state=weekly)
+    no_crash("Weekly OEE with drill-down renders", outcome)
+    fig = H.figures.get("oee_weekly_clean_drill_chart_oee")
+    check("Weekly trend is a line when several days have data", fig is not None and fig.data[1].kind == "Scatter",
+          getattr(fig, "data", None))
+    check("Default card = latest day with data (Čet 22.10)", any("Čet 22.10.2026" in m for m in _drill_cards()), _drill_cards())
+    _click_chart("oee_weekly_clean_drill_chart_oee", "Uto 20.10", "2026-10-20")
+    no_crash("Click on a day", run(state={"selected_module": "OEE"}))
+    check("Click selects the day", H.session_state.get("oee_weekly_clean_drill_sel") == "2026-10-20",
+          H.session_state.get("oee_weekly_clean_drill_sel"))
+    check("Card for the clicked day is shown", any("Uto 20.10.2026 · OEE" in m for m in _drill_cards()), _drill_cards())
+    H.session_state.update({"oee_weekly_clean_drill_metric": "a"})
+    no_crash("Switch chart to Availability", run(state={"selected_module": "OEE"}))
+    check("Availability card for the selected day", any("Uto 20.10.2026 · Dostupnost" in m for m in _drill_cards()), _drill_cards())
+    outcome = run(clicks=["oee_weekly_clean_drill_open"], state={"selected_module": "OEE"})
+    no_crash("Drill down from week to day", outcome)
+    check("Drill-down opens the Daily page for that day",
+          H.session_state.get("oee_page_selector") == "Daily"
+          and H.session_state.get("oee_daily_selected_date") == dt.date(2026, 10, 20), 
+          (H.session_state.get("oee_page_selector"), H.session_state.get("oee_daily_selected_date")))
+    check("Drill-down keeps the chosen metric", H.session_state.get("oee_daily_clean_drill_metric") == "a")
+    check("Daily page shows the availability card", any("Dostupnost" in m for m in _drill_cards()), _drill_cards())
+    check("Breadcrumb remembers the week", [c["label"] for c in H.session_state.get("oee_drill_trail", [])] == ["2026-CW43"],
+          H.session_state.get("oee_drill_trail"))
+    _click_chart("oee_daily_clean_daily_components_bar", "Q-rate")
+    no_crash("Click Q-rate bar on Daily", run(state={"selected_module": "OEE"}))
+    check("Clicking the Q-rate bar opens the quality card", H.session_state.get("oee_daily_clean_drill_metric") == "q"
+          and any("Kvalitet" in m for m in _drill_cards()), _drill_cards())
+    outcome = run(clicks=["oee_drill_crumb_0"], state={"selected_module": "OEE"})
+    no_crash("Breadcrumb back to the week", outcome)
+    check("Back returns to the same CW", H.session_state.get("oee_page_selector") == "Weekly"
+          and H.session_state.get("oee_weekly_selected_week") == (2026, 43), H.session_state.get("oee_weekly_selected_week"))
+
+    # --- one day with data -> bar instead of a lonely point ------------------
+    no_crash("CW42 (one day) renders", run(state={**weekly, "oee_weekly_selected_week": (2026, 42)}))
+    fig = H.figures.get("oee_weekly_clean_drill_chart_oee")
+    check("Single day is drawn as a bar, not a lonely point", fig is not None and fig.data[1].kind == "Bar")
+
+    # --- Yearly -> Monthly -> Weekly ----------------------------------------
+    yearly = {"selected_module": "OEE", "oee_page_selector": "Yearly", "oee_yearly_selected_year": 2026}
+    no_crash("Yearly OEE renders", run(state=yearly))
+    _click_chart("oee_yearly_clean_drill_chart_oee", "Sep", "2026-09")
+    no_crash("Click September", run(state={"selected_module": "OEE"}))
+    check("Card for September", any("Sep 2026 · OEE" in m for m in _drill_cards()), _drill_cards())
+    no_crash("Drill year -> month", run(clicks=["oee_yearly_clean_drill_open"], state={"selected_module": "OEE"}))
+    check("Monthly page opened for 2026-09", H.session_state.get("oee_page_selector") == "Monthly"
+          and H.session_state.get("oee_monthly_selected_month") == (2026, 9), H.session_state.get("oee_monthly_selected_month"))
+    H.session_state.update({"oee_monthly_selected_month": (2026, 10)})
+    no_crash("Monthly October", run(state={"selected_module": "OEE"}))
+    _click_chart("oee_monthly_clean_drill_chart_oee", "CW43", "2026-W43")
+    no_crash("Click CW43", run(state={"selected_module": "OEE"}))
+    check("Sub-chart shows the days of the clicked week", "oee_monthly_clean_drill_sub" in H.messages("chart"), H.messages("chart"))
+    no_crash("Drill month -> week", run(clicks=["oee_monthly_clean_drill_open"], state={"selected_module": "OEE"}))
+    check("Weekly page opened for CW43", H.session_state.get("oee_page_selector") == "Weekly"
+          and H.session_state.get("oee_weekly_selected_week") == (2026, 43))
+    check("Breadcrumb: year -> month", [c["label"] for c in H.session_state.get("oee_drill_trail", [])] == ["2026", "2026-10"],
+          H.session_state.get("oee_drill_trail"))
+    no_crash("Manual page change clears breadcrumb", run(state={"selected_module": "OEE", "oee_page_selector": "Raw Data"}))
+    check("Breadcrumb cleared after manual navigation", not H.session_state.get("oee_drill_trail"))
+
+    # --- Machine ranking -----------------------------------------------------
+    ranking = {"selected_module": "OEE", "oee_page_selector": "Machine Ranking", "oee_ranking_date_filter": dt.date(2026, 10, 19)}
+    no_crash("Machine Ranking renders", run(state=ranking))
+    fig = H.figures.get("oee_machine_ranking_filtered_chart")
+    check("Ranking is horizontal and its height follows the machine count",
+          fig is not None and fig.data[0].get("orientation") == "h" and fig.layout.get("height") == 78 + 44 * 2,
+          getattr(fig, "layout", None))
+    label = "APP350 · Inspection Rotor · RL 2"
+    _click_chart("oee_machine_ranking_filtered_chart", None, label, y="#2  " + label)
+    no_crash("Click a machine in the ranking", run(state={"selected_module": "OEE"}))
+    check("Ranking click opens that machine's card", any("RL 2 · 19.10.2026" in m for m in _drill_cards()), _drill_cards())
+    no_crash("Dashboard renders", run(state={"selected_module": "OEE", "oee_page_selector": "Dashboard"}))
+    for page in ["Daily", "Weekly", "Monthly", "Yearly"]:
+        no_crash(f"OEE '{page}' with Machine=RL 1 renders",
+                 run(state={"selected_module": "OEE", "oee_page_selector": page,
+                            f"oee_{page.lower()}_inline_machine": "RL 1"}))
+    check("Every OEE chart property is valid plotly", len(plotly_fake.PROBLEMS) == problems_before,
+          plotly_fake.PROBLEMS[problems_before:][:10])
 
 
 def scenario_bn():
@@ -650,6 +834,7 @@ def main():
         scenario_admin_task_and_activity,
         scenario_kpi_sees_everything,
         scenario_oee,
+        scenario_oee_drilldown,
         scenario_bn,
         scenario_line_verification_and_admin,
         scenario_every_work_ticket_view,
@@ -668,6 +853,10 @@ def main():
             scenario()
         except Exception as exc:  # a crash in the harness is also a failure
             check(f"{scenario.__name__} completed", False, f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}")
+    from plotly import _dummy as plotly_fake
+    print("\n=== chart properties (all modules) ===")
+    check("Every chart in every module uses valid plotly properties", not plotly_fake.PROBLEMS,
+          sorted(set(plotly_fake.PROBLEMS))[:15])
     failed = [r for r in RESULTS if not r[1]]
     print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} checks passed in {time.perf_counter() - started:.1f}s; "
           f"Google calls: reads={gspread.QUOTA['reads']} writes={gspread.QUOTA['writes']}")

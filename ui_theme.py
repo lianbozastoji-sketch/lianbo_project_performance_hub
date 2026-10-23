@@ -25,6 +25,7 @@ COLORS = {
     "warn": "#F59E0B",
     "alarm": "#EF4444",
     "info": "#A78BFA",
+    "glow": "#F43F5E",
 }
 
 # Industrial chart palette: cyan, steel blue, amber, green, violet, rose, slate, red
@@ -57,6 +58,10 @@ def theme_css(background_css: str = "") -> str:
     --ok: {COLORS['ok']};
     --warn: {COLORS['warn']};
     --alarm: {COLORS['alarm']};
+    --glow: {COLORS['glow']};
+    --glow-soft: rgba(244,63,94,0.24);
+    --glow-ring: 0 0 0 1px rgba(244,63,94,0.30), 0 0 20px rgba(244,63,94,0.42);
+    --glow-press: 0 0 0 2px rgba(244,63,94,0.50), 0 0 28px rgba(244,63,94,0.60);
     --radius: 14px;
     --shadow: 0 10px 30px rgba(0,0,0,0.28);
 }}
@@ -238,9 +243,10 @@ section[data-testid="stSidebar"] .stButton > button:hover {{
 }}
 section[data-testid="stSidebar"] .stButton > button[kind="primary"],
 section[data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"] {{
-    background: linear-gradient(90deg, rgba(34,211,238,0.18), rgba(59,130,246,0.08)) !important;
-    border: 1px solid rgba(34,211,238,0.35) !important;
-    border-left: 3px solid var(--accent) !important;
+    background: linear-gradient(90deg, rgba(244,63,94,0.26), rgba(244,63,94,0.06)) !important;
+    border: 1px solid rgba(244,63,94,0.60) !important;
+    border-left: 3px solid var(--glow) !important;
+    box-shadow: var(--glow-ring) !important;
     color: #FFFFFF !important;
 }}
 section[data-testid="stSidebar"] hr {{ border-color: var(--line) !important; margin: 10px 0 !important; }}
@@ -262,6 +268,23 @@ section[data-testid="stSidebar"] hr {{ border-color: var(--line) !important; mar
 }}
 [data-testid="stFormSubmitButton"] button {{
     background: linear-gradient(135deg, #0EA5C6, #2563EB) !important; border: 1px solid rgba(34,211,238,0.6) !important; color: #fff !important;
+}}
+/* Pressed / focused: red glow instead of Streamlit's white flash (all buttons). */
+.stButton > button:active, .stButton > button:focus:active,
+.stDownloadButton > button:active, [data-testid="stFormSubmitButton"] button:active,
+section[data-testid="stSidebar"] .stButton > button:active,
+[class*="st-key-mobile_nav_"] button:active {{
+    background: var(--glow-soft) !important; color: #FFFFFF !important;
+    border-color: var(--glow) !important; box-shadow: var(--glow-press) !important;
+    transform: translateY(0) !important;
+}}
+.stButton > button:focus-visible, .stDownloadButton > button:focus-visible, [data-testid="stFormSubmitButton"] button:focus-visible {{
+    outline: none !important; border-color: var(--glow) !important; box-shadow: var(--glow-ring) !important;
+}}
+.stButton > button:focus:not(:active), [data-testid="stFormSubmitButton"] button:focus:not(:active) {{ color: #FFFFFF !important; }}
+[class*="st-key-mobile_nav_"] button[kind="primary"], [class*="st-key-mobile_nav_"] button[data-testid="stBaseButton-primary"] {{
+    background: linear-gradient(90deg, rgba(244,63,94,0.26), rgba(244,63,94,0.06)) !important;
+    border: 1px solid rgba(244,63,94,0.60) !important; box-shadow: var(--glow-ring) !important; color: #FFFFFF !important;
 }}
 button:disabled, button[disabled] {{ opacity: 0.55 !important; cursor: not-allowed !important; transform: none !important; }}
 
@@ -296,8 +319,9 @@ div[role="radiogroup"][aria-orientation="horizontal"], .stRadio div[role="radiog
 .stRadio div[role="radiogroup"] > label p {{ font-size: 0.84rem !important; font-weight: 650 !important; color: #A9B9CF !important; }}
 .stRadio div[role="radiogroup"] > label:hover {{ background: rgba(148,163,184,0.08); }}
 .stRadio div[role="radiogroup"] > label:has(input:checked) {{
-    background: linear-gradient(135deg, rgba(34,211,238,0.22), rgba(59,130,246,0.18));
-    border-color: rgba(34,211,238,0.45);
+    background: var(--glow-soft);
+    border-color: rgba(244,63,94,0.65);
+    box-shadow: var(--glow-ring);
 }}
 .stRadio div[role="radiogroup"] > label:has(input:checked) p {{ color: #FFFFFF !important; }}
 .nav-level-2 .stRadio div[role="radiogroup"] {{ background: transparent; border: none; padding: 0 !important; }}
@@ -307,9 +331,36 @@ div[role="radiogroup"][aria-orientation="horizontal"], .stRadio div[role="radiog
 .stTabs [data-baseweb="tab"] {{
     padding: 8px 14px; border-radius: 10px 10px 0 0; color: #A9B9CF; font-weight: 650; background: transparent;
 }}
-.stTabs [aria-selected="true"] {{ color: #fff !important; background: rgba(34,211,238,0.10) !important; }}
-.stTabs [data-baseweb="tab-highlight"] {{ background-color: var(--accent) !important; }}
+.stTabs [aria-selected="true"] {{ color: #fff !important; background: rgba(244,63,94,0.14) !important; box-shadow: 0 -6px 18px rgba(244,63,94,0.18) inset; }}
+.stTabs [data-baseweb="tab-highlight"] {{ background-color: var(--glow) !important; box-shadow: 0 0 10px rgba(244,63,94,0.8); }}
 .stTabs, .stTabs * {{ pointer-events: auto; }}
+
+/* ---------- OEE drill-down card (v10.1) ---------- */
+.drill-card {{
+    background: var(--panel); border: 1px solid rgba(244,63,94,0.45); box-shadow: 0 0 24px rgba(244,63,94,0.12);
+    border-radius: var(--radius); padding: 16px 18px; margin: 6px 0 14px 0;
+}}
+.drill-head {{ display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }}
+.drill-title {{ font-size: 1.05rem; font-weight: 800; color: #FFFFFF; }}
+.drill-badge {{ font-size: 0.72rem; padding: 3px 10px; border-radius: 999px; background: rgba(148,163,184,0.10); border: 1px solid rgba(148,163,184,0.25); color: #C9D6E8; }}
+.drill-tiles {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }}
+.drill-tile {{ background: #0C1526; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }}
+.drill-tile-label {{ font-size: 0.75rem; color: var(--muted); }}
+.drill-tile-value {{ font-size: 1.55rem; font-weight: 800; margin: 4px 0 6px 0; letter-spacing: -0.01em; }}
+.drill-track {{ height: 6px; border-radius: 3px; background: rgba(148,163,184,0.12); overflow: hidden; }}
+.drill-track > div {{ height: 6px; border-radius: 3px; }}
+.drill-tile-sub {{ font-size: 0.75rem; color: var(--muted); margin-top: 6px; }}
+.drill-seg {{ display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: rgba(148,163,184,0.12); margin-top: 14px; }}
+.drill-legend {{ display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.75rem; color: #C9D6E8; margin-top: 6px; }}
+.drill-legend i {{ display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }}
+.drill-formula {{ font-size: 0.8rem; color: var(--muted); margin-top: 12px; }}
+.drill-impact {{ margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }}
+.drill-impact-title {{ font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #6B7F99; margin-bottom: 6px; }}
+.drill-impact ol {{ margin: 0; padding-left: 18px; }}
+.drill-impact li {{ font-size: 0.85rem; color: var(--text); margin: 2px 0; }}
+.drill-impact li span {{ margin-left: 8px; }}
+.drill-empty {{ color: var(--muted); font-size: 0.85rem; }}
+@media (max-width: 760px) {{ .drill-tiles {{ grid-template-columns: 1fr; }} }}
 
 /* ---------- Panels ---------- */
 [data-testid="stPlotlyChart"] {{
@@ -498,3 +549,49 @@ def format_number(value, decimals: int = 1) -> str:
         return "–"
     text = f"{number:,.{decimals}f}"
     return text.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# ---------------------------------------------------------------------------
+# OEE drill-down card
+# ---------------------------------------------------------------------------
+def drill_card_html(title: str, badge: str, data: dict) -> str:
+    """Detail card shown under a clicked bar. One line of HTML (no indentation,
+    so Markdown never turns it into a code block)."""
+    tiles = "".join(
+        f'<div class="drill-tile"><div class="drill-tile-label">{esc(t.get("label"))}</div>'
+        f'<div class="drill-tile-value" style="color:{t.get("color", "#E6EDF7")}">{esc(t.get("value"))}</div>'
+        f'<div class="drill-track"><div style="width:{max(0.0, min(100.0, float(t.get("pw", 0) or 0))):.1f}%;'
+        f'background:{t.get("color", "#94A3B8")}"></div></div>'
+        f'<div class="drill-tile-sub">{esc(t.get("sub"))}</div></div>'
+        for t in data.get("tiles", [])
+    )
+    segments_html = ""
+    segments = [seg for seg in data.get("segments", []) if float(seg.get("value", 0) or 0) >= 0]
+    total = sum(float(seg.get("value", 0) or 0) for seg in segments)
+    if segments and total > 0:
+        bar = "".join(
+            f'<div style="width:{float(seg.get("value", 0) or 0) / total * 100:.2f}%;background:{seg.get("color")}"></div>'
+            for seg in segments
+        )
+        legend = "".join(f'<span><i style="background:{seg.get("color")}"></i>{esc(seg.get("label"))}</span>' for seg in segments)
+        segments_html = f'<div class="drill-seg">{bar}</div><div class="drill-legend">{legend}</div>'
+    impact_html = ""
+    if data.get("impact"):
+        items = "".join(
+            f'<li><b>{esc(machine)}</b><span style="color:{color}">{esc(text)}</span></li>'
+            for machine, text, color in data["impact"]
+        )
+        impact_html = (f'<div class="drill-impact"><div class="drill-impact-title">{esc(data.get("impact_title", ""))}</div>'
+                       f'<ol>{items}</ol></div>')
+    formula = data.get("formula") or ""
+    formula_html = f'<div class="drill-formula">{esc(formula)}</div>' if formula else ""
+    return (
+        f'<div class="drill-card"><div class="drill-head"><div class="drill-title">{esc(title)}</div>'
+        f'<span class="drill-badge">{esc(badge)}</span></div>'
+        f'<div class="drill-tiles">{tiles}</div>{segments_html}{formula_html}{impact_html}</div>'
+    )
+
+
+def drill_empty_html(title: str, message: str) -> str:
+    return (f'<div class="drill-card"><div class="drill-head"><div class="drill-title">{esc(title)}</div></div>'
+            f'<div class="drill-empty">{esc(message)}</div></div>')
