@@ -25,9 +25,11 @@ class MissingPenaltyResult:
 
 
 def normalize_name(value: object) -> str:
-    text = unicodedata.normalize("NFKD", str(value or "").strip())
+    """Case, diacritic (đ -> dj) and word-order independent person key."""
+    text = str(value or "").strip().replace("Đ", "Dj").replace("đ", "dj")
+    text = unicodedata.normalize("NFKD", text)
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return re.sub(r"[^a-z0-9]+", "", text.casefold())
+    return " ".join(sorted(re.findall(r"[a-z0-9]+", text.casefold())))
 
 
 def normalize_technician_id(value: object) -> str:
@@ -37,6 +39,18 @@ def normalize_technician_id(value: object) -> str:
     if match:
         return f"TECH-{int(match.group(1)):06d}"
     return raw
+
+
+def _parse_mixed_datetime(value: object):
+    """Locale-independent date parser shared with the activity data layer."""
+    try:
+        from activity_data_layer import parse_date_value
+    except Exception:  # pragma: no cover - fallback when imported standalone
+        text = str(value or "").strip()
+        if not text or text.casefold() in {"nan", "none", "nat"}:
+            return pd.NaT
+        return pd.to_datetime(text, dayfirst=True, errors="coerce")
+    return parse_date_value(value)
 
 
 def canonicalize_missing_work_frame(raw: pd.DataFrame) -> pd.DataFrame:
@@ -68,7 +82,9 @@ def canonicalize_missing_work_frame(raw: pd.DataFrame) -> pd.DataFrame:
         df[column] = df[column].fillna("").astype(str).replace({"nan": "", "None": ""}).str.strip()
     df["Technician_ID_Norm"] = df["Technician_ID"].map(normalize_technician_id)
     df["Technician_Name_Norm"] = df["Technician_Name"].map(normalize_name)
-    df["Missing_Date_Parsed"] = pd.to_datetime(df["Missing_Date"], dayfirst=True, errors="coerce").dt.normalize()
+    df["Missing_Date_Parsed"] = pd.to_datetime(
+        df["Missing_Date"].map(_parse_mixed_datetime), errors="coerce"
+    ).dt.normalize()
     return df
 
 
