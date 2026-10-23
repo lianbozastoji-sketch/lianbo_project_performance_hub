@@ -1,0 +1,16 @@
+[server]
+# Serves files from ./static at app/static/... (background image is downloaded once
+# and cached by the browser instead of being re-sent with every interaction).
+enableStaticServing = true
+# Smaller websocket messages and faster reruns.
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+[runner]
+# Send the page progressively; users see the header and menu immediately.
+fastReruns = true

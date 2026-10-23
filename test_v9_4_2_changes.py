@@ -1,0 +1,75 @@
+import ast
+import re
+import sys
+import unittest
+from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from activity_data_layer import parse_date_value, parse_time_value  # noqa: E402
+
+SOURCE_PATH = Path(__file__).resolve().parents[1] / "lianbo_project_performance_hub.py"
+SOURCE_TEXT = SOURCE_PATH.read_text(encoding="utf-8")
+SOURCE_TREE = ast.parse(SOURCE_TEXT)
+
+
+def load_symbols(names, initial=None):
+    nodes = []
+    for node in SOURCE_TREE.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in names:
+            nodes.append(node)
+        elif isinstance(node, ast.Assign):
+            assigned = {target.id for target in node.targets if isinstance(target, ast.Name)}
+            if assigned & names:
+                nodes.append(node)
+    namespace = {"pd": pd, "re": re, "datetime": datetime, "parse_mixed_datetime": parse_date_value, "parse_time_value": parse_time_value}
+    namespace.update(initial or {})
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE_PATH), "exec"), namespace)
+    return namespace
+
+
+class OeeAllShiftSelectionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ns = load_symbols({"_oee_included_shifts_text", "build_oee_row"}, initial={"get_current_oee_submitter": lambda: "Tester"})
+
+    def test_two_selected_shifts_drive_open_time_and_target(self):
+        row = self.ns["build_oee_row"](
+            "2026-08-26", "APP350", "Inspection Rotor", "RL 1",
+            30, 1000, 480, 2, 1600, 100, 30, 10,
+            "Tester", "All shifts", ["1st", "3rd"],
+        )
+        self.assertEqual(row[7], 960.0)
+        self.assertEqual(row[8], 2.0)
+        self.assertEqual(row[14], 2000.0)
+        self.assertEqual(row[17], "1st | 3rd")
+
+    def test_old_shift_count_input_removed_and_toggle_buttons_added(self):
+        self.assertNotIn("How many shifts are included?", SOURCE_TEXT)
+        self.assertNotIn('st.pills(', SOURCE_TEXT)
+        self.assertIn('shift_order = ["1st", "2nd", "3rd"]', SOURCE_TEXT)
+        self.assertIn('state_key = "oee_included_shift_buttons"', SOURCE_TEXT)
+        self.assertIn('key=shift_button_keys[shift_name]', SOURCE_TEXT)
+
+
+class WorkTicketTimestampTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ns = load_symbols({"_format_task_card_datetime"})
+
+    def test_card_timestamp_format(self):
+        formatted = self.ns["_format_task_card_datetime"]("26.08.2026", "08:05")
+        self.assertEqual(formatted, "26.08.2026 08:05")
+
+    def test_completed_card_and_close_flow_include_start_and_end(self):
+        self.assertIn("Started: {html.escape(started_at", SOURCE_TEXT)
+        self.assertIn("Finished: {html.escape(finished_at", SOURCE_TEXT)
+        self.assertIn('update_values["Start_Date"] = activity_start_dt.strftime("%d.%m.%Y")', SOURCE_TEXT)
+        self.assertIn('update_values["End_Date"] = activity_end_dt.strftime("%d.%m.%Y")', SOURCE_TEXT)
+        self.assertIn("_build_task_activity_time_bounds", SOURCE_TEXT)
+
+
+if __name__ == "__main__":
+    unittest.main()

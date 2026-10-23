@@ -25,11 +25,15 @@ class EmailService:
         "Error_Message",
     ]
 
-    def __init__(self, get_client_func, sheet_id, log_sheet_name="EMAIL_LOG", log_columns=None):
+    def __init__(self, get_client_func, sheet_id, log_sheet_name="EMAIL_LOG", log_columns=None, log_worksheet_func=None):
         self.get_client_func = get_client_func
         self.sheet_id = sheet_id
         self.log_sheet_name = log_sheet_name
         self.log_columns = log_columns or self.DEFAULT_LOG_COLUMNS
+        # Optional cached worksheet provider. Without it every log line cost
+        # three Google requests (open spreadsheet, find worksheet, read header).
+        self.log_worksheet_func = log_worksheet_func
+        self._log_ws = None
 
     @staticmethod
     def _yes_value(value):
@@ -147,6 +151,11 @@ class EmailService:
         return headers
 
     def _ensure_log_sheet(self):
+        if self._log_ws is not None:
+            return self._log_ws
+        if self.log_worksheet_func is not None:
+            self._log_ws = self.log_worksheet_func()
+            return self._log_ws
         client = self.get_client_func()
         sh = client.open_by_key(self.sheet_id)
         try:
@@ -154,12 +163,13 @@ class EmailService:
         except Exception:
             ws = sh.add_worksheet(title=self.log_sheet_name, rows=1000, cols=len(self.log_columns))
         self._ensure_sheet_headers(ws, self.log_columns)
+        self._log_ws = ws
         return ws
 
     def log_event(self, email_type, recipient, subject, status, related_id="", error_message=""):
         try:
             ws = self._ensure_log_sheet()
-            headers = self._ensure_sheet_headers(ws, self.log_columns)
+            headers = list(self.log_columns)
             row = {
                 "Timestamp": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
                 "Email_Type": email_type,
@@ -169,7 +179,7 @@ class EmailService:
                 "Related_ID": related_id,
                 "Error_Message": error_message,
             }
-            ws.append_row([self._safe_value(row.get(h, "")) for h in headers], value_input_option="USER_ENTERED")
+            ws.append_row([self._safe_value(row.get(h, "")) for h in headers], value_input_option="RAW", table_range="A1")
         except Exception:
             # Never block the application if e-mail log cannot be written.
             pass
@@ -195,6 +205,18 @@ class EmailService:
         sent = 0
         failed = 0
         errors = []
+        smtp = None
+
+        def connect():
+            if cfg["use_ssl"] or cfg["port"] == 465:
+                connection = smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=20)
+            else:
+                connection = smtplib.SMTP(cfg["host"], cfg["port"], timeout=20)
+                if cfg["use_tls"]:
+                    connection.starttls()
+            connection.login(cfg["username"], cfg["password"])
+            return connection
+
         for recipient in recipients:
             try:
                 msg = EmailMessage()
@@ -203,15 +225,17 @@ class EmailService:
                 msg["To"] = recipient
                 msg.set_content(body)
 
-                if cfg["use_ssl"] or cfg["port"] == 465:
-                    smtp_context = smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=20)
-                else:
-                    smtp_context = smtplib.SMTP(cfg["host"], cfg["port"], timeout=20)
-
-                with smtp_context as smtp:
-                    if cfg["use_tls"] and cfg["port"] != 465:
-                        smtp.starttls()
-                    smtp.login(cfg["username"], cfg["password"])
+                # One SMTP login for the whole batch instead of one per recipient.
+                if smtp is None:
+                    smtp = connect()
+                try:
+                    smtp.send_message(msg)
+                except (smtplib.SMTPServerDisconnected, smtplib.SMTPSenderRefused):
+                    try:
+                        smtp.close()
+                    except Exception:
+                        pass
+                    smtp = connect()
                     smtp.send_message(msg)
 
                 sent += 1
@@ -226,5 +250,12 @@ class EmailService:
                 error_text = f"{type(e).__name__}: {e}"
                 errors.append(f"{recipient}: {error_text}")
                 self.log_event(email_type, recipient, subject, "FAILED", related_id, error_text)
+                if isinstance(e, (smtplib.SMTPServerDisconnected, OSError)):
+                    smtp = None
 
+        if smtp is not None:
+            try:
+                smtp.quit()
+            except Exception:
+                pass
         return {"sent": sent, "failed": failed, "skipped": "", "errors": errors}

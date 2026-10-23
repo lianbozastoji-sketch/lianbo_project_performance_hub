@@ -138,13 +138,28 @@ def main() -> int:
             browser.close()
             return 3
 
-        # The notification checks run before login. Give Google Sheets reads,
-        # synchronization, SMTP delivery and EMAIL_LOG writes enough time to finish.
-        print("Waiting for background notification checks to finish.")
-        time.sleep(90)
+        # Wait for the automation page to report completion instead of a blind
+        # 90 s sleep (synchronization + alerts can take longer on a cold start).
+        print("Waiting for background synchronization and notification checks to finish.")
+        finished = False
+        deadline = time.monotonic() + 420
+        while time.monotonic() < deadline:
+            try:
+                if page.get_by_text("Automation checks completed.").count():
+                    finished = True
+                    break
+                if page.get_by_text(re.compile(r"Sign in|Login", re.IGNORECASE)).count() and page.locator("input[type=password]").count():
+                    print("The app showed the login page: AUTOMATION_TOKEN in GitHub does not match Streamlit Secrets.", file=sys.stderr)
+                    break
+            except Exception:
+                pass
+            time.sleep(5)
         save_diagnostics(page)
         browser.close()
 
+    if not finished:
+        print("Automation did not report completion.", file=sys.stderr)
+        return 4
     print("Wake cycle completed successfully.")
     return 0
 

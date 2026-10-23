@@ -25,9 +25,11 @@ class MissingPenaltyResult:
 
 
 def normalize_name(value: object) -> str:
-    text = unicodedata.normalize("NFKD", str(value or "").strip())
+    """Case, diacritic (đ -> dj) and word-order independent person key."""
+    text = str(value or "").strip().replace("Đ", "Dj").replace("đ", "dj")
+    text = unicodedata.normalize("NFKD", text)
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return re.sub(r"[^a-z0-9]+", "", text.casefold())
+    return " ".join(sorted(re.findall(r"[a-z0-9]+", text.casefold())))
 
 
 def normalize_technician_id(value: object) -> str:
@@ -40,16 +42,15 @@ def normalize_technician_id(value: object) -> str:
 
 
 def _parse_mixed_datetime(value: object):
-    if isinstance(value, pd.Timestamp):
-        return value
-    text = str(value or "").strip()
-    if not text or text.casefold() in {"nan", "none", "nat"}:
-        return pd.NaT
-    if re.match(r"^\d{4}-\d{1,2}-\d{1,2}(?:[T\s].*)?$", text):
-        return pd.to_datetime(text, yearfirst=True, dayfirst=False, errors="coerce")
-    if re.match(r"^\d{1,2}[./]\d{1,2}[./]\d{4}(?:[T\s].*)?$", text):
-        return pd.to_datetime(text, yearfirst=False, dayfirst=True, errors="coerce")
-    return pd.to_datetime(text, errors="coerce")
+    """Locale-independent date parser shared with the activity data layer."""
+    try:
+        from activity_data_layer import parse_date_value
+    except Exception:  # pragma: no cover - fallback when imported standalone
+        text = str(value or "").strip()
+        if not text or text.casefold() in {"nan", "none", "nat"}:
+            return pd.NaT
+        return pd.to_datetime(text, dayfirst=True, errors="coerce")
+    return parse_date_value(value)
 
 
 def canonicalize_missing_work_frame(raw: pd.DataFrame) -> pd.DataFrame:

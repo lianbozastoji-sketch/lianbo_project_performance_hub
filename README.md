@@ -1,6 +1,6 @@
 # Lianbo Project Performance Hub
 
-Complete replacement package — version `v9.4.9_weighted_period_oee`, built on the verified v9.4.3 OEE IWON package.
+Complete replacement package — version `v9.9.0` (data-integrity and speed release, built on v9.8.0).
 
 This package keeps the existing Google Sheets databases and application functions. Replacing the GitHub code does not delete Google Sheets records.
 
@@ -28,7 +28,7 @@ This package keeps the existing Google Sheets databases and application function
 
 Do not delete the GitHub repository itself. Delete/replace only its files. Deleting the repository also deletes the `STREAMLIT_APP_URL` Action secret and can break the existing Streamlit deployment connection.
 
-1. Extract `LianBo_Project_Performance_Hub_v9.4.9.zip` on the computer.
+1. Extract `LianBo_Project_Performance_Hub_v9.9.0.zip` on the computer.
 2. Open the existing GitHub repository on branch `main`.
 3. Remove the old repository files, but keep the repository itself.
 4. Choose **Add file -> Upload files**.
@@ -36,7 +36,10 @@ Do not delete the GitHub repository itself. Delete/replace only its files. Delet
 6. Confirm that `.github/workflows/wake_streamlit.yml` exists in exactly that path.
 7. Commit directly to `main`.
 
-The repository root must contain `lianbo_project_performance_hub.py` and `requirements.txt`.
+The repository root must contain `lianbo_project_performance_hub.py`, `requirements.txt`,
+the `static/` folder (background picture) and `.streamlit/config.toml`
+(enables static file serving; without it the app still works, only the
+background picture is not shown).
 
 ## Streamlit Community Cloud
 
@@ -58,7 +61,7 @@ Create or verify:
 - Name: `STREAMLIT_APP_URL`
 - Value: the complete deployed Streamlit application URL beginning with `https://`
 
-Optional security hardening: set the same `AUTOMATION_TOKEN` value in GitHub Actions secrets and Streamlit Secrets. If it is configured in Streamlit, the background route requires that token.
+Optional security hardening: set the same `AUTOMATION_TOKEN` value in GitHub Actions secrets **and** Streamlit Secrets. If it is configured in Streamlit, the background route requires that token (the workflow now passes it). Without a token the background route still runs (earlier versions silently skipped all background work when the token was missing).
 
 Then open `Actions -> Wake Streamlit and run alerts -> Run workflow` once manually. A successful run should be green and will upload a short-lived diagnostic screenshot artifact.
 
@@ -79,6 +82,27 @@ Only active people whose applicable notification flag is `YES` receive that aler
 The same user row also stores `View_*` and `Edit_*` columns for Work Tickets, KPI Process, Bottleneck, OEE, Line Verification and Administration. Blank means `Role default`; `YES` and `NO` are individual overrides.
 
 All delivery attempts are recorded in the `EMAIL_LOG` worksheet. Use the Admin/Alerts manual-check buttons for an immediate test.
+
+## v9.9.0 changes (why entries sometimes looked missing)
+
+- KPI now imports new Google Forms, Work Ticket and downtime entries by itself (at most every 2 minutes, immediately after a Work Ticket save). Before, the import ran only through the background automation, which never ran: it required `AUTOMATION_TOKEN` and the workflow did not pass it.
+- Work Ticket date/time fields accept `23.10.2026.`, `23. 10. 2026.`, `23/10/2026`, `23.10.26`, `8.30`, `8h30`, `830`; an empty End Date means the same day. Earlier a trailing dot or a missing End Date rejected a correct entry.
+- Mixed time formats (`08:30`, `8:30:00`) no longer remove rows from KPI.
+- Names are matched independent of word order, case and diacritics (`Nikolić Bojan` = `Bojan Nikolic`, `Đorđe` = `Djordje`), and KPI always shows the official technician name.
+- Sheet columns are matched independent of spelling (`Assigned To` = `Assigned_To`); text starting with `-`, `+`, `=` is no longer stored as `#ERROR!`; appends are anchored at column A.
+- Forms keep the typed values when an entry is rejected; double taps on Save do not create duplicates; a failed follow-up step (e-mail, ENVA) never hides a saved entry.
+- Google Sheets engine: real quota limiter (no fixed 0.35 s wait before every request), live reads for duplicate checks and row updates, stale data only after all retries and with a visible warning.
+- BN Forms: decimal comma (`12,5`) accepted, dates detected per sheet locale, duplicate check by real date. Line Verification dates are no longer swapped/dropped.
+- Missing-work alert is sent only after a successful synchronization (no false alarms) and never twice.
+- Period OEE again uses daily-capped components (v9.4.9 rule).
+- Background picture served as a static file (was re-sent with every click).
+
+Run the checks locally:
+
+```
+python -m unittest discover -s tests -p "test_*.py"
+python tests/simulation/run_simulation.py
+```
 
 ## Important
 
