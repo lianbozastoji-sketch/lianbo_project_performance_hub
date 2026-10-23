@@ -1,10 +1,14 @@
 import ast
 import re
+import sys
 import unittest
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from activity_data_layer import parse_date_value, parse_time_value  # noqa: E402
 
 SOURCE_PATH = Path(__file__).resolve().parents[1] / "lianbo_project_performance_hub.py"
 SOURCE_TEXT = SOURCE_PATH.read_text(encoding="utf-8")
@@ -20,7 +24,7 @@ def load_symbols(names, initial=None):
             assigned = {target.id for target in node.targets if isinstance(target, ast.Name)}
             if assigned & names:
                 nodes.append(node)
-    namespace = {"pd": pd, "re": re, "datetime": datetime}
+    namespace = {"pd": pd, "re": re, "datetime": datetime, "parse_mixed_datetime": parse_date_value, "parse_time_value": parse_time_value}
     namespace.update(initial or {})
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE_PATH), "exec"), namespace)
     return namespace
@@ -60,8 +64,8 @@ class WorkTicketTimestampTests(unittest.TestCase):
         self.assertEqual(formatted, "26.08.2026 08:05")
 
     def test_completed_card_and_close_flow_include_start_and_end(self):
-        self.assertIn("Started: {started_at", SOURCE_TEXT)
-        self.assertIn("Finished: {finished_at", SOURCE_TEXT)
+        self.assertIn("Started: {html.escape(started_at", SOURCE_TEXT)
+        self.assertIn("Finished: {html.escape(finished_at", SOURCE_TEXT)
         self.assertIn('update_values["Start_Date"] = activity_start_dt.strftime("%d.%m.%Y")', SOURCE_TEXT)
         self.assertIn('update_values["End_Date"] = activity_end_dt.strftime("%d.%m.%Y")', SOURCE_TEXT)
         self.assertIn("_build_task_activity_time_bounds", SOURCE_TEXT)

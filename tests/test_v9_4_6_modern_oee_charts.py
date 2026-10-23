@@ -7,7 +7,7 @@ SOURCE = (Path(__file__).resolve().parents[1] / "lianbo_project_performance_hub.
 
 class ModernOeeChartTests(unittest.TestCase):
     def test_version_and_target(self):
-        self.assertIn('APP_VERSION = "v9.4.9_weighted_period_oee"', SOURCE)
+        self.assertRegex(SOURCE, r'APP_VERSION = "v9\.(4\.9|[5-9]\.\d+|\d{2,}\.\d+)')
         self.assertIn("OEE_CHART_TARGET = 85.0", SOURCE)
 
     def test_modern_trend_visuals(self):

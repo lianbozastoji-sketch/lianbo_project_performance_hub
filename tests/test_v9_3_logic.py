@@ -1,9 +1,14 @@
 import ast
+import contextlib
 import re
+import sys
 import unittest
 from pathlib import Path
 
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from activity_data_layer import parse_date_value, parse_time_value  # noqa: E402
 
 
 SOURCE_PATH = Path(__file__).resolve().parents[1] / "lianbo_project_performance_hub.py"
@@ -19,7 +24,14 @@ def load_symbols(names, initial=None):
             assigned = {target.id for target in node.targets if isinstance(target, ast.Name)}
             if assigned & names:
                 nodes.append(node)
-    namespace = {"pd": pd}
+    namespace = {
+        "pd": pd,
+        "parse_mixed_datetime": parse_date_value,
+        "parse_date_value": parse_date_value,
+        "parse_time_value": parse_time_value,
+        "fresh_reads": contextlib.nullcontext,
+        "_live_reads": lambda func: func,
+    }
     namespace.update(initial or {})
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE_PATH), "exec"), namespace)
     return namespace
@@ -41,7 +53,10 @@ class HeaderWorksheet:
     def get_all_values(self):
         return self.values
 
-    def update(self, cell_range, values):
+    def row_values(self, row):
+        return list(self.values[row - 1]) if len(self.values) >= row else []
+
+    def update(self, cell_range, values, **kwargs):
         self.updates.append((cell_range, values))
 
 

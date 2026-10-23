@@ -18,7 +18,7 @@ def load_symbols(names, initial=None):
             assigned = {target.id for target in node.targets if isinstance(target, ast.Name)}
             if assigned & names:
                 nodes.append(node)
-    namespace = {"pd": pd}
+    namespace = {"pd": pd, "_live_reads": lambda func: func}
     namespace.update(initial or {})
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE_PATH), "exec"), namespace)
     return namespace
@@ -34,6 +34,13 @@ class FakeResultWorksheet:
 
     def get_all_values(self):
         return [list(r) for r in self.values]
+
+    def get(self, a1=None, **kwargs):
+        return [list(r) for r in self.values]
+
+    def batch_update(self, data, value_input_option=None):
+        for item in data:
+            self.updated.append((item["range"], item["values"], value_input_option))
 
     def update(self, cell_range, values, value_input_option=None):
         self.updated.append((cell_range, values, value_input_option))
@@ -55,6 +62,7 @@ class IwonCoreTests(unittest.TestCase):
         cls.ns = load_symbols({
             "_balanced_iwon_components",
             "_upsert_iwon_result_rows",
+            "_delete_worksheet_rows_batch",
             "OEE_IWON_RESULT_COLUMNS",
         })
 
@@ -87,8 +95,12 @@ class IwonCoreTests(unittest.TestCase):
         ]
         self.ns["_upsert_iwon_result_rows"](ws, 2026, 32, "P", "Proc", rows)
         self.assertFalse(ws.clear_called)
-        self.assertTrue(any(rng == "A2:J2" for rng, _, _ in ws.updated))
-        self.assertEqual(len(ws.appended), 1)
+        ranges = [rng for rng, _, _ in ws.updated]
+        # Existing GLOBAL row is updated in place, the new machine goes to the
+        # first free row; the other week's row (A3) is never touched.
+        self.assertIn("A2:J2", ranges)
+        self.assertIn("A4:J4", ranges)
+        self.assertNotIn("A3:J3", ranges)
         self.assertEqual(ws.cleared_ranges, [])
 
     def test_weekly_iwon_branch_does_not_recalculate_or_write(self):
