@@ -1,0 +1,20 @@
+[server]
+enableStaticServing = true
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+[runner]
+fastReruns = true
+
+[theme]
+base = "dark"
+primaryColor = "#F43F5E"
+backgroundColor = "#0A1120"
+secondaryBackgroundColor = "#101A2C"
+textColor = "#E6EDF7"
+font = "sans serif"
