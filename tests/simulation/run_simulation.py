@@ -415,17 +415,32 @@ def scenario_oee():
     run(state=base)
     H.session_state.update({"oee_selected_date": PREV, "oee_shift_selector": "1st shift (06:00-14:00)",
                             "oee_project_selector": "APP350", "oee_ok": 800, "oee_nok": 20, "oee_down": 30.0, "oee_org": 10.0})
+    run(state=base)
+    check("Downtime reported in the technicians' form is pulled into the OEE input",
+          any("već prijavljeno 30 min zastoja" in m for m in H.messages("info")), H.messages("info"))
+    outcome = run(clicks=["submit:oee_input_form:💾 Save / Check existing record"], state=base)
+    _, data = rows(OEE, "OEE_input")
+    check("Save is refused while 10 min of org. loss have no cause",
+          len(data) == 0 and any("Org. gubici: uzrok nedostaje za 10" in m for m in H.messages("error")), H.messages("error"))
+    H.session_state["oee_alloc_editor"] = pd.DataFrame([{"Uzrok": "Čekanje materijala", "Minuta": 10}])
     outcome = run(clicks=["submit:oee_input_form:💾 Save / Check existing record"], state=base)
     no_crash("OEE input saves", outcome)
     _, data = rows(OEE, "OEE_input")
     check("OEE row written", len(data) == 1, data)
-    H.session_state.update({"oee_ok": 810, "oee_nok": 10, "oee_down": 20.0, "oee_org": 5.0})
+    _, events = rows(OEE, "DOWNTIME_EVENTS")
+    check("Causes from the OEE input are stored", [(e[7], float(e[8]), e[13]) for e in events] == [("Čekanje materijala", 10.0, "OEE_UNOS")],
+          events)
+    H.session_state.update({"oee_ok": 810, "oee_nok": 10, "oee_down": 35.0, "oee_org": 5.0})
+    H.session_state["oee_alloc_editor"] = pd.DataFrame([{"Uzrok": "Mašinski kvar", "Minuta": 5}, {"Uzrok": "Nema operatera", "Minuta": 5}])
     run(clicks=["submit:oee_input_form:💾 Save / Check existing record"], state=base)
-    check("Duplicate OEE entry detected", "oee_pending_row" in H.session_state, H.messages("warning"))
+    check("Duplicate OEE entry detected", "oee_pending_row" in H.session_state, H.messages("warning") + H.messages("error"))
     outcome = run(clicks=["oee_update_existing"], state=base)
     no_crash("OEE update", outcome)
     _, data = rows(OEE, "OEE_input")
     check("OEE update replaced the row (no duplicate)", len(data) == 1 and str(data[0][9]) in ("810", "810.0"), data)
+    _, events = rows(OEE, "DOWNTIME_EVENTS")
+    check("Updating the shift replaces its causes (no double counting)",
+          sorted((e[7], float(e[8])) for e in events) == [("Mašinski kvar", 5.0), ("Nema operatera", 5.0)], events)
     for page in ["Dashboard", "Daily", "Weekly", "Monthly", "Yearly", "Machine Ranking", "Raw Data"]:
         no_crash(f"OEE page '{page}' renders", run(state={"selected_module": "OEE", "oee_page_selector": page}))
 
@@ -474,6 +489,9 @@ def _scenario_oee_drilldown_body():
     from plotly import _dummy as plotly_fake
     problems_before = len(plotly_fake.PROBLEMS)
     ws = sheet(OEE, "OEE_input")
+    existing = ws.get_all_values()
+    if len(existing) > 1:  # start from a clean OEE sheet (independent of today's date)
+        ws.delete_rows(2, len(existing))
     ws.append_rows([
         [d, "", "", "APP350", "Inspection Rotor", m, ct, op, 1, ok, nok, ok + nok, down, org, target, "sim", "All shifts", ""]
         for d, m, ct, op, down, org, ok, nok, target in OEE_DRILL_ROWS
@@ -604,6 +622,179 @@ def _scenario_oee_drilldown_body():
                             f"oee_{page.lower()}_inline_machine": "RL 1"}))
     check("Every OEE chart property is valid plotly", len(plotly_fake.PROBLEMS) == problems_before,
           plotly_fake.PROBLEMS[problems_before:][:10])
+
+
+def _alerts():
+    return [("error", m) for m in H.messages("error")] + [("uncaught", m[:300]) for m in H.messages("uncaught")]
+
+
+def scenario_v11_downtime_report():
+    login("admin", "admin123")
+    base = {"selected_module": "OEE", "oee_page_selector": "Downtime"}
+    no_crash("Downtime report page renders", run(state=base))
+    before = len(rows(OEE, "DOWNTIME_EVENTS")[1])
+    no_crash("Start downtime", run(clicks=["dt_start"], state=base))
+    head, data = rows(OEE, "DOWNTIME_EVENTS")
+    running = [r for r in data if r[head.index("Status")] == "U TOKU"]
+    check("Running downtime stored immediately (not lost if the phone is closed)", len(data) == before + 1 and len(running) == 1, data[-1:])
+    event_id = running[0][0] if running else ""
+    H.session_state[f"dt_cause_{event_id}"] = "Električni kvar"
+    no_crash("Stop downtime with cause", run(clicks=[f"dt_stop_{event_id}"], state={"selected_module": "OEE"}))
+    head, data = rows(OEE, "DOWNTIME_EVENTS")
+    done = [r for r in data if r[0] == event_id]
+    check("Stopped downtime has cause, end time and minutes",
+          done and done[0][head.index("Status")] == "ZAVRŠEN" and done[0][head.index("Cause")] == "Električni kvar"
+          and float(done[0][head.index("Minutes")]) >= 1, done)
+    H.session_state.update({"dt_manual_start": "8:10", "dt_manual_end": "8.25", "dt_manual_cause": "Zamena senzora / dela"})
+    no_crash("Manual downtime entry", run(clicks=["submit:dt_manual_form:Sačuvaj zastoj"], state={"selected_module": "OEE"}))
+    head, data = rows(OEE, "DOWNTIME_EVENTS")
+    check("Manual downtime saved with 15 min", any(r[head.index("Cause")] == "Zamena senzora / dela" and float(r[head.index("Minutes")]) == 15
+                                                   for r in data), data[-2:])
+    check("No errors on the downtime page", not _alerts(), _alerts())
+
+
+V11_EVENTS = [
+    # Datum, Machine, Cause, Loss type, minutes
+    ("19.10.2026", "RL 2", "Električni kvar", "Zastoj", 45),
+    ("19.10.2026", "RL 2", "Mašinski kvar", "Zastoj", 15),
+    ("19.10.2026", "RL 1", "Čekanje materijala", "Organizacioni gubitak", 10),
+    ("19.10.2026", "RL 1", "Zamena senzora / dela", "Zastoj", 30),
+    ("14.10.2026", "RL 1", "Zamena senzora / dela", "Zastoj", 8),
+    ("14.10.2026", "RL 1", "Zamena senzora / dela", "Zastoj", 2.5),
+    ("14.10.2026", "RL 1", "Zamena senzora / dela", "Zastoj", 9),
+    ("15.09.2026", "RL 1", "Zamena senzora / dela", "Zastoj", 8),
+    ("15.09.2026", "RL 1", "Zamena senzora / dela", "Zastoj", 3),
+    ("15.09.2026", "RL 1", "Električni kvar", "Zastoj", 37),
+]
+
+
+def scenario_v11_manager_view():
+    login("admin", "admin123")
+    g = app()
+    ws = sheet(OEE, "DOWNTIME_EVENTS")
+    head = ws.get_all_values()[0]
+    for i, (day, machine, cause, loss, minutes) in enumerate(V11_EVENTS):
+        record = {"Event_ID": f"SIM-{i}", "Datum": day, "Shift": "1st", "Project": "APP350", "Process": "Inspection Rotor",
+                  "Machine": machine, "Loss_Type": loss, "Cause": cause, "Minutes": minutes, "Status": "ZAVRŠEN", "Source": "PRIJAVA"}
+        ws.append_rows([[record.get(h, "") for h in head]])
+    g["load_app_downtime_events"].clear()
+    g["save_oee_settings"]([("CENA_KOMADA", "APP350", "8"), ("OPIS_PROCESA", "APP350|Inspection Rotor", "Završna kontrola rotora")])
+    weekly = {"selected_module": "OEE", "oee_page_selector": "Weekly", "oee_weekly_selected_week": (2026, 43)}
+    no_crash("Weekly page with manager summary", run(state=weekly))
+    md = " ".join(H.messages("markdown"))
+    check("Summary sentence for managers", "OEE mašine ove nedelje je" in md
+          and ("bolje nego u prethodnom periodu" in md or "slabije nego u prethodnom periodu" in md),
+          [m[:200] for m in H.messages("markdown") if "hl-box" in m])
+    check("Data coverage is visible (3 of 5 workdays)", "Uneto 3 od 5 radnih dana" in md and "Nedostaje: Sre 21.10, Pet 23.10" in md)
+    check("Tiles show change vs previous week", "od prethodnog perioda" in md)
+    check("Lost pieces, hours and value (price from settings)", "Manje komada od targeta" in md and "Vrednost gubitka" in md and "€" in md)
+    check("Process description for people far from the line", "Završna kontrola rotora" in " ".join(H.messages("caption")))
+    check("Pareto of causes", "Zašto smo gubili vreme" in md and "Električni kvar" in md and "Bez uzroka" in md)
+    check("Machine ranking shows volume", any("kom ·" in str(t) for t in (H.figures.get("oee_weekly_clean_machine_rank").data[0].get("text") or [])))
+    check("Glossary available", "Šta znače pojmovi?" in H.messages("expander"), H.messages("expander"))
+    H.session_state.update({"oee_weekly_clean_drill_metric": "a"})
+    _click_chart("oee_weekly_clean_drill_chart_a", "Pon 19.10", "2026-10-19")
+    no_crash("Availability card with causes of the clicked day", run(state={"selected_module": "OEE"}))
+    check("Clicked day lists its causes", any("Uzroci · Pon 19.10.2026" in m for m in H.messages("markdown")))
+    H.session_state.update({"oee_weekly_clean_action_cause": "Električni kvar", "oee_weekly_clean_action_machine": "RL 2",
+                            "oee_weekly_clean_action_title": "zameniti napojni kabl", "oee_weekly_clean_action_owner": "Bojan Nikolić"})
+    no_crash("Create action from a loss", run(clicks=["submit:oee_weekly_clean_action_form:Sačuvaj akciju"], state={"selected_module": "OEE"}))
+    head, data = rows(KPI, "TASKS")
+    action = [r for r in data if str(r[head.index("Task Title") if "Task Title" in head else head.index("Task_Title")]).startswith("[OEE]")]
+    check("Action saved in Work Tickets with link to the loss",
+          action and "OEE|APP350|Inspection Rotor|RL 2|Električni kvar" in action[0], action)
+    no_crash("Action list renders", run(state={"selected_module": "OEE"}))
+    actions = app()["load_oee_actions"]("APP350", "Inspection Rotor")
+    check("Action visible next to the losses", len(actions) == 1 and actions.iloc[0]["_machine"] == "RL 2"
+          and actions.iloc[0]["_cause"] == "Električni kvar" and bool(actions.iloc[0]["_open"]), actions.to_dict("records")[:1])
+    check("No errors on the manager view", not _alerts(), _alerts())
+
+
+def scenario_v11_uprava_and_email():
+    login("bojan", "b123")
+    no_crash("Uprava page for a normal user with OEE access", run(state={"selected_module": "Uprava", "uprava_week": (2026, 43)}))
+    md = " ".join(H.messages("markdown"))
+    check("Uprava: one sentence for the whole factory", "Fabrika je u CW43 radila sa OEE" in md, md[:300])
+    check("Uprava: project card + 13-week trend", "mg-card" in md and any(k.startswith("uprava_spark_") for k in H.messages("chart")))
+    check("Uprava: top losses with action status", any("(" in m for m in H.messages("dataframe")))
+    no_crash("Open the week from Uprava", run(clicks=["uprava_open_app350_inspection_rotor"], state={"selected_module": "Uprava"}))
+    check("Card button opens OEE weekly for that project", H.session_state.get("selected_module") == "OEE"
+          and H.session_state.get("oee_weekly_selected_week") == (2026, 43), H.session_state.get("selected_module"))
+    check("No errors on Uprava", not _alerts(), _alerts())
+    g = app()
+    g["save_oee_settings"]([("UPRAVA_EMAIL", "", "uprava@example.com, direktor@example.com"), ("UPRAVA_EMAIL_AKTIVNO", "", "YES")])
+    before = len(SENT_MAIL)
+    result = g["run_weekly_management_email"](now=dt.datetime(2026, 10, 26, 7, 30))
+    mails = SENT_MAIL[before:]
+    check("Weekly e-mail on Monday 07:30 to both recipients", result.get("status") == "sent" and len(mails) == 2, result)
+    check("E-mail subject and body are plain and complete",
+          mails and mails[0]["subject"].startswith("OEE CW43") and "NAJVEĆI GUBICI" in mails[0]["body"] and "IWON" not in mails[0]["body"],
+          mails[:1])
+    again = g["run_weekly_management_email"](now=dt.datetime(2026, 10, 26, 9, 0))
+    check("E-mail is not sent twice for the same week", again.get("status") == "already_sent", again)
+    check("No e-mail on other days", g["run_weekly_management_email"](now=dt.datetime(2026, 10, 27, 9, 0)).get("status") == "not_due")
+
+
+def scenario_v11_iwon_private():
+    login("admin", "admin123")
+    H.secrets.pop("IWON_USERS", None)
+    g = app()
+    check("IWON is not an OEE metric for anyone", "IWON_OEE_%" not in g["OEE_METRIC_OPTIONS"].values())
+    no_crash("Admin without IWON access", run(state={"selected_module": "OEE", "oee_page_selector": "IWON"}))
+    check("Admin without IWON_USERS cannot open IWON", H.session_state.get("oee_page_selector") != "IWON"
+          and not any("IWON" in m for m in H.messages("caption")), H.session_state.get("oee_page_selector"))
+    no_crash("Administration without IWON", run(state={"selected_module": "Administration"}))
+    check("Administration has no IWON section", not any("IWON" in m for m in H.messages("markdown") + H.messages("caption")))
+
+    H.secrets["IWON_USERS"] = ["admin"]
+    targets = pd.DataFrame({"CW": list(range(1, 54)), "Target_OEE": [85.0 if 43 <= cw <= 50 else None for cw in range(1, 54)]})
+    g["save_oee_iwon_target_grid"](2026, "APP350", "Inspection Rotor", targets, "admin")
+    iwon = {"selected_module": "OEE", "oee_page_selector": "IWON", "iwon_p_year": 2026, "iwon_p_project": "APP350",
+            "iwon_p_process": "Inspection Rotor", "iwon_p_from": 43, "iwon_p_to": 50, "iwon_p_weeks": 10}
+    no_crash("IWON page for an allowed user", run(state=iwon))
+    no_crash("Generate IWON CW43-CW50 (also future weeks)", run(clicks=["iwon_generate_btn"], state=iwon))
+    head, data = rows(IWON, "IWON_COMPARE")
+    weeks = sorted({int(r[head.index("CW")]) for r in data})
+    check("Plan exists for every week, with or without data", weeks == list(range(43, 51)), weeks)
+    future = [r for r in data if int(r[head.index("CW")]) == 50 and r[head.index("Machine")] == "GLOBAL"]
+    check("Future week: plan + forecast, no actual yet", future and future[0][head.index("Actual_OEE")] == ""
+          and abs(float(future[0][head.index("Plan_OEE")]) - 85) < 0.05 and future[0][head.index("Forecast_OEE")] != "", future)
+    _, iwon_rows = rows(IWON, "OEE_IWON")
+    check("OEE_IWON keeps its A:J layout for the existing comparison", len(iwon_rows) >= 8 * 3 and all(len(r) >= 10 for r in iwon_rows))
+    count_before = len(data)
+    no_crash("Generate again without replace", run(clicks=["iwon_generate_btn"], state=iwon))
+    head, data = rows(IWON, "IWON_COMPARE")
+    check("Existing plans are frozen (not changed)", len(data) == count_before and any("zamrznut" in m for m in H.messages("info")))
+    no_crash("Generate with replace", run(clicks=["iwon_generate_btn"], state={**iwon, "iwon_p_replace": True, "iwon_p_from": 43, "iwon_p_to": 43}))
+    _, history = rows(IWON, "IWON_PLAN_HISTORY")
+    head, data = rows(IWON, "IWON_COMPARE")
+    v2 = [r for r in data if int(r[head.index("CW")]) == 43]
+    check("Replaced plan goes to history, new version 2", len(history) == 3 and all(str(r[head.index("Plan_Version")]) == "2" for r in v2), history[:1])
+    compare = {"selected_module": "OEE", "oee_page_selector": "IWON", "iwon_c_year": 2026, "iwon_c_project": "APP350",
+               "iwon_c_process": "Inspection Rotor"}
+    no_crash("Refresh actual", run(clicks=["iwon_refresh_all"], state=compare))
+    head, data = rows(IWON, "IWON_COMPARE")
+    cw43 = [r for r in data if int(r[head.index("CW")]) == 43 and r[head.index("Machine")] == "GLOBAL"][0]
+    check("Refresh fills actual and deviation for weeks with data", cw43[head.index("Actual_OEE")] != "" and cw43[head.index("Dev_Plan_OEE")] != "", cw43)
+    check("Refresh never changes the frozen plan", str(cw43[head.index("Plan_Version")]) == "2")
+    head, causes = rows(IWON, "IWON_CAUSE_PLAN")
+    sensor = [r for r in causes if r[head.index("Cause")] == "Zamena senzora / dela" and int(r[head.index("CW")]) == 44]
+    check("Per-cause targets from real downtime (sensor change: shorter)", sensor and sensor[0][head.index("Lever")] == "kraće"
+          and sensor[0][head.index("Rating")] in ("realno", "izazovno", "nerealno", "bez promene"), causes[:2])
+    no_crash("Comparison tab renders", run(state=compare))
+    check("Comparison chart shown", "iwon_compare_chart" in H.messages("chart"))
+    check("No errors on IWON", not _alerts(), _alerts())
+
+    login("bojan", "b123")
+    no_crash("Other user", run(state={"selected_module": "OEE", "oee_page_selector": "IWON"}))
+    check("Other users never see IWON", H.session_state.get("oee_page_selector") != "IWON")
+    for page in ["Weekly", "Dashboard", "Machine Ranking"]:
+        run(state={"selected_module": "OEE", "oee_page_selector": page})
+        visible = " ".join(H.messages("markdown") + H.messages("caption") + H.messages("subheader"))
+        check(f"No IWON on OEE '{page}'", "IWON" not in visible)
+    run(state={"selected_module": "Uprava"})
+    check("No IWON on Uprava", "IWON" not in " ".join(H.messages("markdown") + H.messages("caption")))
+    H.secrets.pop("IWON_USERS", None)
 
 
 def scenario_bn():
@@ -835,6 +1026,10 @@ def main():
         scenario_kpi_sees_everything,
         scenario_oee,
         scenario_oee_drilldown,
+        scenario_v11_downtime_report,
+        scenario_v11_manager_view,
+        scenario_v11_uprava_and_email,
+        scenario_v11_iwon_private,
         scenario_bn,
         scenario_line_verification_and_admin,
         scenario_every_work_ticket_view,

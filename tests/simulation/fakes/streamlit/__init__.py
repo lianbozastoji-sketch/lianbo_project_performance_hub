@@ -213,7 +213,7 @@ class DeltaGenerator:
 
     # ---------------------------------------------------------- display
     def markdown(self, body="", *args, **kwargs):
-        HARNESS.record("markdown", str(body)[:300])
+        HARNESS.record("markdown", str(body)[:6000])
 
     def write(self, *args, **kwargs):
         HARNESS.record("write", *[str(a)[:500] for a in args])
@@ -298,7 +298,8 @@ class DeltaGenerator:
     def container(self, *a, **k):
         return DeltaGenerator("container")
 
-    def expander(self, *a, **k):
+    def expander(self, label="", *a, **k):
+        HARNESS.record("expander", label)
         return DeltaGenerator("expander")
 
     def popover(self, *a, **k):
@@ -456,6 +457,20 @@ def experimental_rerun():
 
 
 components = types.SimpleNamespace(v1=types.SimpleNamespace(html=lambda *a, **k: None))
+
+
+def _column(kind):
+    def make(label=None, **kwargs):
+        if kind == "select" and "options" in kwargs and not isinstance(kwargs["options"], (list, tuple)):
+            raise StreamlitAPIException("SelectboxColumn options must be a list")
+        return {"kind": kind, "label": label, **kwargs}
+    return make
+
+
+column_config = types.SimpleNamespace(
+    SelectboxColumn=_column("select"), NumberColumn=_column("number"), TextColumn=_column("text"),
+    CheckboxColumn=_column("checkbox"), DateColumn=_column("date"),
+)
 
 
 # --------------------------------------------------------------------------

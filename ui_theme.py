@@ -362,6 +362,39 @@ div[role="radiogroup"][aria-orientation="horizontal"], .stRadio div[role="radiog
 .drill-empty {{ color: var(--muted); font-size: 0.85rem; }}
 @media (max-width: 760px) {{ .drill-tiles {{ grid-template-columns: 1fr; }} }}
 
+/* ---------- v11 manager view ---------- */
+.hl-box {{ border-radius: var(--radius); padding: 14px 18px; font-size: 1.02rem; line-height: 1.55; margin: 4px 0 12px 0; color: var(--text); }}
+.hl-box.ok {{ background: linear-gradient(90deg, rgba(34,197,94,0.14), rgba(34,197,94,0.03)); border: 1px solid rgba(34,197,94,0.35); }}
+.hl-box.warn {{ background: linear-gradient(90deg, rgba(245,158,11,0.14), rgba(245,158,11,0.03)); border: 1px solid rgba(245,158,11,0.38); }}
+.hl-box.alarm {{ background: linear-gradient(90deg, rgba(239,68,68,0.14), rgba(239,68,68,0.03)); border: 1px solid rgba(239,68,68,0.38); }}
+.hl-box.neutral {{ background: var(--panel); border: 1px solid var(--line); }}
+.stat-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 4px 0 12px 0; }}
+.stat-tile {{ background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }}
+.stat-head {{ display: flex; justify-content: space-between; align-items: center; gap: 8px; }}
+.stat-label {{ font-size: 0.78rem; color: var(--muted); font-weight: 650; }}
+.stat-info {{ display: inline-flex; width: 20px; height: 20px; border-radius: 50%; align-items: center; justify-content: center;
+    border: 1px solid rgba(148,163,184,0.35); color: #E6EDF7; font-size: 0.7rem; font-weight: 800; cursor: help; }}
+.stat-value {{ font-size: 1.65rem; font-weight: 800; margin: 2px 0; letter-spacing: -0.01em; }}
+.stat-foot {{ font-size: 0.78rem; font-weight: 700; }}
+.stat-sub {{ font-size: 0.74rem; color: var(--muted); }}
+.cov-chip {{ display: inline-block; font-size: 0.76rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin: 0 6px 6px 0; }}
+.cov-chip.ok {{ background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #86EFAC; }}
+.cov-chip.warn {{ background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.45); color: #FCD34D; }}
+.bar-rows {{ display: grid; grid-template-columns: minmax(120px, 210px) minmax(0, 1fr) minmax(90px, auto); gap: 8px 12px; align-items: center; font-size: 0.86rem; }}
+.bar-track {{ height: 14px; border-radius: 4px; background: rgba(148,163,184,0.10); overflow: hidden; }}
+.bar-track > div {{ height: 14px; border-radius: 4px; }}
+.bar-val {{ color: var(--muted); white-space: nowrap; }}
+.bar-val b {{ color: var(--text); }}
+.panel-box {{ background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 4px 0 12px 0; }}
+.panel-box h4 {{ margin: 0 0 10px 0; font-size: 0.95rem; }}
+.mg-card {{ background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--muted); border-radius: var(--radius); padding: 14px 16px; }}
+.mg-card.ok {{ border-top-color: #22C55E; }} .mg-card.warn {{ border-top-color: #F59E0B; }} .mg-card.alarm {{ border-top-color: #EF4444; }}
+.mg-title {{ display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }}
+.mg-title b {{ font-size: 1rem; }} .mg-title span {{ font-size: 0.74rem; color: var(--muted); text-align: right; }}
+.mg-value {{ font-size: 2rem; font-weight: 800; margin: 2px 0; }}
+.mg-lines {{ border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; font-size: 0.82rem; line-height: 1.6; }}
+@media (max-width: 760px) {{ .bar-rows {{ grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) auto; }} }}
+
 /* ---------- Panels ---------- */
 [data-testid="stPlotlyChart"] {{
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -595,3 +628,62 @@ def drill_card_html(title: str, badge: str, data: dict) -> str:
 def drill_empty_html(title: str, message: str) -> str:
     return (f'<div class="drill-card"><div class="drill-head"><div class="drill-title">{esc(title)}</div></div>'
             f'<div class="drill-empty">{esc(message)}</div></div>')
+
+
+# ---------------------------------------------------------------------------
+# v11 manager view helpers
+# ---------------------------------------------------------------------------
+_STATUS_TEXT = {"ok": "#4ADE80", "warn": "#FBBF24", "alarm": "#F87171", "neutral": "#E6EDF7", "up": "#4ADE80",
+                "down": "#F87171", "flat": "#93A4BC", "none": "#93A4BC"}
+
+
+def headline_html(text: str, status: str = "neutral") -> str:
+    status = status if status in ("ok", "warn", "alarm", "neutral") else "neutral"
+    return f'<div class="hl-box {status}">{esc(text)}</div>'
+
+
+def stat_tiles_html(tiles) -> str:
+    """tiles: dicts with label, value, status, foot, foot_status, sub, tooltip."""
+    parts = []
+    for t in tiles:
+        tip = t.get("tooltip")
+        info = f'<span class="stat-info" title="{esc(tip)}">i</span>' if tip else ""
+        foot = (f'<div class="stat-foot" style="color:{_STATUS_TEXT.get(t.get("foot_status", "none"), "#93A4BC")}">'
+                f'{esc(t.get("foot"))}</div>') if t.get("foot") else ""
+        sub = f'<div class="stat-sub">{esc(t.get("sub"))}</div>' if t.get("sub") else ""
+        parts.append(
+            f'<div class="stat-tile"><div class="stat-head"><span class="stat-label">{esc(t.get("label"))}</span>{info}</div>'
+            f'<div class="stat-value" style="color:{_STATUS_TEXT.get(t.get("status", "neutral"), "#E6EDF7")}">{esc(t.get("value"))}</div>'
+            f'{foot}{sub}</div>'
+        )
+    return f'<div class="stat-grid">{"".join(parts)}</div>'
+
+
+def coverage_chips_html(chips) -> str:
+    """chips: (text, 'ok'|'warn')."""
+    return "".join(f'<span class="cov-chip {status}">{esc(text)}</span>' for text, status in chips)
+
+
+def bar_rows_html(items, title: str = "", note: str = "") -> str:
+    """Horizontal bars as HTML (readable everywhere, also in screenshots/e-mail)."""
+    rows = "".join(
+        f'<span>{esc(i.get("label"))}</span>'
+        f'<div class="bar-track"><div style="width:{max(0.0, min(100.0, float(i.get("pct", 0) or 0))):.1f}%;'
+        f'background:{i.get("color", "#22D3EE")}"></div></div>'
+        f'<span class="bar-val">{i.get("value_html", esc(i.get("value", "")))}</span>'
+        for i in items
+    )
+    head = f"<h4>{esc(title)}</h4>" if title else ""
+    foot = f'<div class="stat-sub" style="margin-top:8px">{esc(note)}</div>' if note else ""
+    return f'<div class="panel-box">{head}<div class="bar-rows">{rows}</div>{foot}</div>'
+
+
+def mgmt_card_html(title: str, subtitle: str, value: str, status: str, delta: str, delta_status: str, lines) -> str:
+    status = status if status in ("ok", "warn", "alarm") else ""
+    body = "".join(f"<div>{line}</div>" for line in lines)
+    return (
+        f'<div class="mg-card {status}"><div class="mg-title"><b>{esc(title)}</b><span>{esc(subtitle)}</span></div>'
+        f'<div class="mg-value" style="color:{_STATUS_TEXT.get(status or "neutral", "#E6EDF7")}">{esc(value)}</div>'
+        f'<div class="stat-foot" style="color:{_STATUS_TEXT.get(delta_status, "#93A4BC")}">{esc(delta)}</div>'
+        f'<div class="mg-lines">{body}</div></div>'
+    )
