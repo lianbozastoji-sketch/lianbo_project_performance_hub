@@ -321,6 +321,9 @@ def check_allocation(down_time, org_loss, logged: pd.DataFrame, rows: pd.DataFra
             minutes = pd.to_numeric(str(row.get("Minuta", "") or "").replace(",", "."), errors="coerce")
             if not cause and (pd.isna(minutes) or minutes == 0):
                 continue
+            if not cause:
+                errors.append(f"Izaberi razlog za red sa {_num(minutes)} min.")
+                continue
             if cause not in known:
                 errors.append(f"Nepoznat uzrok: '{cause or '—'}'. Izaberi iz liste.")
                 continue
