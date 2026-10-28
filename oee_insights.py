@@ -97,6 +97,29 @@ def cause_lever_map(causes_df: pd.DataFrame) -> dict:
     return {(row.Loss_Type, row.Cause): row.Lever for row in clean_causes(causes_df).itertuples(index=False)}
 
 
+def clean_reason(text) -> str:
+    """Free-text reason as typed, tidied: trimmed, single spaces, first letter capital."""
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+    return text[:1].upper() + text[1:] if text else ""
+
+
+def reason_key(text) -> str:
+    """Grouping key: 'senzor OP30' and 'Senzor  op30' are the same reason."""
+    return _fold(clean_reason(text))
+
+
+def lever_for_reason(text, loss_type=LOSS_DOWNTIME, causes_df=None) -> str:
+    """Free text -> 'ređe' (breakdowns) or 'kraće' (changes, setups) via the catalogue keywords."""
+    levers = cause_lever_map(causes_df)
+    exact = {(lt, _fold(c)): lv for (lt, c), lv in levers.items()}
+    if (loss_type, _fold(text)) in exact:
+        return exact[(loss_type, _fold(text))]
+    matched_type, matched = match_cause(text, causes_df)
+    if matched.startswith("Ostalo"):
+        return LEVER_FREQUENCY if any(w in _fold(text) for w in ("kvar", "pukao", "pukla", "zaglav", "greska", "alarm")) else LEVER_DURATION
+    return levers.get((matched_type, matched), LEVER_DURATION)
+
+
 def shift_for_time(value) -> str:
     """06-14 = 1st, 14-22 = 2nd, 22-06 = 3rd (night shift belongs to the start date)."""
     if isinstance(value, datetime):
@@ -317,20 +340,23 @@ def check_allocation(down_time, org_loss, logged: pd.DataFrame, rows: pd.DataFra
     errors = []
     if rows is not None and not rows.empty:
         for row in rows.to_dict("records"):
-            cause = str(row.get("Uzrok", "") or "").strip()
+            cause = clean_reason(row.get("Uzrok", ""))
             minutes = pd.to_numeric(str(row.get("Minuta", "") or "").replace(",", "."), errors="coerce")
+            loss_type = str(row.get("Vrsta", "") or "").strip()
             if not cause and (pd.isna(minutes) or minutes == 0):
                 continue
             if not cause:
-                errors.append(f"Izaberi razlog za red sa {_num(minutes)} min.")
+                errors.append(f"Upiši razlog za red sa {_num(minutes)} min.")
                 continue
-            if cause not in known:
-                errors.append(f"Nepoznat uzrok: '{cause or '—'}'. Izaberi iz liste.")
-                continue
+            if loss_type not in LOSS_TYPES:
+                if cause not in known:
+                    errors.append(f"Nepoznat uzrok: '{cause}'.")
+                    continue
+                loss_type = known[cause]
             if pd.isna(minutes) or minutes <= 0:
-                errors.append(f"Uzrok '{cause}' nema minute.")
+                errors.append(f"Razlog '{cause}' nema minute.")
                 continue
-            alloc.append({"Loss_Type": known[cause], "Cause": cause, "Minutes": float(minutes)})
+            alloc.append({"Loss_Type": loss_type, "Cause": cause, "Minutes": float(minutes)})
     logged = logged if logged is not None else pd.DataFrame(columns=DOWNTIME_EVENT_COLUMNS)
     logged_down = float(logged.loc[logged["Loss_Type"] == LOSS_DOWNTIME, "Minutes"].sum()) if not logged.empty else 0.0
     logged_org = float(logged.loc[logged["Loss_Type"] == LOSS_ORGANISATIONAL, "Minutes"].sum()) if not logged.empty else 0.0
@@ -387,10 +413,15 @@ def loss_pareto(events: pd.DataFrame, oee_rows: pd.DataFrame, include_org=True) 
         ev = ev[ev["Status"] != STATUS_OPEN]
         if not include_org:
             ev = ev[ev["Loss_Type"] == LOSS_DOWNTIME]
-    grouped = (
-        ev.groupby(["Cause", "Loss_Type"], dropna=False)["Minutes"].agg(["sum", "count"]).reset_index()
-        if not ev.empty else pd.DataFrame(columns=["Cause", "Loss_Type", "sum", "count"])
-    )
+    if not ev.empty:
+        ev = ev.copy()
+        ev["_key"] = ev["Cause"].map(reason_key)
+        label = ev.groupby(["_key", "Loss_Type"])["Cause"].agg(lambda c: c.map(clean_reason).value_counts().index[0])
+        grouped = ev.groupby(["_key", "Loss_Type"], dropna=False)["Minutes"].agg(["sum", "count"])
+        grouped["Cause"] = label
+        grouped = grouped.reset_index().drop(columns=["_key"])
+    else:
+        grouped = pd.DataFrame(columns=["Cause", "Loss_Type", "sum", "count"])
     grouped = grouped.rename(columns={"sum": "Minutes", "count": "Events"})
     caused_down = float(grouped.loc[grouped["Loss_Type"] == LOSS_DOWNTIME, "Minutes"].sum()) if not grouped.empty else 0.0
     caused_org = float(grouped.loc[grouped["Loss_Type"] == LOSS_ORGANISATIONAL, "Minutes"].sum()) if not grouped.empty else 0.0
@@ -825,14 +856,16 @@ def cause_plan(events: pd.DataFrame, baseline_rows: pd.DataFrame, plan_availabil
     if not ev.empty:
         ev = ev.copy()
         ev["_ws"] = ev["Datum"] - pd.to_timedelta(ev["Datum"].dt.weekday, unit="D")
-        for (machine, cause), frame in ev.groupby([ev["Machine"].astype(str).str.strip(), "Cause"]):
+        ev["_key"] = ev["Cause"].map(reason_key)
+        for (machine, _key), frame in ev.groupby([ev["Machine"].astype(str).str.strip(), "_key"]):
+            cause = frame["Cause"].map(clean_reason).value_counts().index[0]
             durations = frame["Minutes"].tolist()
             counts = [int((frame["_ws"] == w).sum()) for w in week_list] or [len(frame)]
             per_week = len(frame) / n_weeks
             avg = float(sum(durations) / len(durations))
             best_dur = _quantile(durations, best_quantile) if len(durations) >= 3 else avg
             best_freq = _quantile(counts, best_quantile) if len(counts) >= 3 else per_week
-            lever = levers.get((LOSS_DOWNTIME, cause), LEVER_DURATION)
+            lever = levers.get((LOSS_DOWNTIME, cause)) or lever_for_reason(cause, LOSS_DOWNTIME, causes_df)
             if lever == LEVER_FREQUENCY:
                 potential = max(per_week - best_freq, 0.0) * avg
             else:
@@ -917,7 +950,7 @@ def actual_cause_week(events: pd.DataFrame, year, cw, machine, cause) -> tuple:
     frame = events[
         (events["Datum"] >= start) & (events["Datum"] < start + pd.Timedelta(days=7))
         & (events["Machine"].astype(str).str.strip() == str(machine).strip())
-        & (events["Cause"] == cause) & (events["Status"] != STATUS_OPEN)
+        & (events["Cause"].map(reason_key) == reason_key(cause)) & (events["Status"] != STATUS_OPEN)
     ]
     if frame.empty:
         return 0, 0.0, 0.0
