@@ -179,7 +179,7 @@ PASSWORD_HASH_ITERATIONS = 600_000
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_ATTEMPT_WINDOW_SEC = 15 * 60
 
-APP_VERSION = "v11.2.0"
+APP_VERSION = "v11.3.1"
 TARGET_ACTIVITIES_PER_DAY = 4
 BACKGROUND_IMAGE = "project_department.jpg"
 APP_LOGO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAUAAAABMCAMAAAAr+55XAAAAkFBMVEXsXljxl5NSZJ1dq9Oi0ugrZqEnoNM5InIIgruYrMvlGA9njrmJlbrU1+PrQzs2PIFGM3tzxeXvg33ButGGeaf2wb5RO4L+/v4mVpUCmtIZU5UWTI8CeLTw6exUeaoCicTP2ecEaaYwR4npNy+puNL51tVBKnXmIxvV5vGQpsf1t7T3yMa5x9znKyNriLQ7NHu67e2TAAAAMHRSTlP///////////////////////////////////////////////////////////////9Ppz/1AAAPl0lEQVR42u2cC3uiOBeAuaqIaC8zA8WGYoVyUen//3ffOScXEsWK03Z3n89mn53BkATy5lxDdq34YvFcV/vlPomiV05cL77RYl1qULuTp6f7/vf9RADU6rynp4lb/wAcwucBr4kubfdPpwAnT9jqvv4BeKq9HNak11BvMqbqByCWSElbL4K1onVfR8dm8ekG9fgjgJKVEi7Pu3cnsnICnsPD6lpr9gPwHMF7oNdLmgI2uQeoExPzNxeW5xda5Dn7gufkef1pgOheJZtTegri04BfGfmSERMvaxAy/9bKvlmEmeOEYVMMz44VTdg5TgYN2An40VhZEdAoXdjs2acA1mexDaK8VoHrzs/CLMtC39n3b9/5WIclP5pWl6xlSbPmdGp1k6WyQXLcoEmcTCthFxb5ML0w658Dw0SfCWM0Jf56fnGeAQkoyTopegoO1UGlvzcaA740kSVdJ93x84oO8KkGadIZ/UP+LFWgzdAi7LuE3+QF+mRN/YlA2iT4Ao7WE8U9Znu9Acwz+Zp+D5CpSmdvwk6Mkq4zc2KFr02cGhgDLMy7BCfpjgiyxteXSaxEln8iE1FK/PICoYtXq5eu6xrcCtRKtn8DMB0CmA4APOGHDTpDdJKTFuvsQ4DI2CRYd6eD0Erkfw3wHhBReRrMdzEslA2uz4fHA2RhMjAxX5sXCwemnjQfAzRsx/AqiffLrwGokXAFnRc9QqlBgZUgRj3Cvo03DuZ4gHs/HZqXq/uIoQaa8g0CTBJXl780OVPSswQHALo9CclPbRXUZPyguBAAepGUwiOCUOF+LcBFMggwY32vYeEJLgBch0x7yPmyPmcHrQG3AShcg5+Qp/rIcWAuEnGB0wnW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"
@@ -4050,23 +4050,78 @@ def save_oee_record(row_values, existing_row=None, ws=None):
 
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+IWON_TARGET_TAB_GID = 1806481969  # the tab where the targets are typed by hand
+
+
+def _norm_tab_name(name):
+    return re.sub(r"[^a-z0-9]+", "", unicodedata.normalize("NFKD", str(name or "")).encode("ascii", "ignore").decode().lower())
+
+
+def _iwon_target_tabs():
+    """Tabs that can hold IWON targets: the hand-made tab (by its ID) first, then the known names."""
+    spreadsheet = get_spreadsheet(OEE_IWON_SHEET_ID)
+    tabs = spreadsheet.worksheets()
+    ordered = [ws for ws in tabs if getattr(ws, "id", None) == IWON_TARGET_TAB_GID]
+    names = {_norm_tab_name(n) for n in OEE_IWON_TARGET_SHEET_NAMES}
+    ordered += [ws for ws in tabs if _norm_tab_name(ws.title) in names and ws not in ordered]
+    return ordered
+
+
+def _tab_values_unformatted(ws):
+    try:
+        return ws.get("A1:BZ2000", value_render_option="UNFORMATTED_VALUE") or []
+    except TypeError:
+        return ws.get_all_values()
+
+
+def _is_app_target_layout(values):
+    head = [str(x).strip() for x in (values[0] if values else [])][:5]
+    return not values or head == OEE_IWON_TARGET_COLUMNS[:5]
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def load_iwon_target_sources():
+    """Every tab with targets: (title, gid, parsed rows, read info, app-layout?)."""
+    sources = []
+    for ws in _iwon_target_tabs():
+        values = _tab_values_unformatted(ws)
+        frame, info = oi.parse_iwon_targets(values, default_year=_now_local().year)
+        sources.append({"title": ws.title, "gid": getattr(ws, "id", None), "frame": frame, "info": info,
+                        "app_layout": _is_app_target_layout(values)})
+    return sources
+
+
 def load_oee_iwon_targets():
-    client = get_client()
-    ws, _ = open_first_existing_worksheet(client, OEE_IWON_SHEET_ID, OEE_IWON_TARGET_SHEET_NAMES)
-    raw = _worksheet_range_to_dataframe(ws, "A:G")
-    if raw.empty:
+    """Targets from all target tabs. The hand-made tab (gid in the link) wins for the same week."""
+    frames = [src["frame"] for src in reversed(load_iwon_target_sources()) if not src["frame"].empty]
+    if not frames:
         return pd.DataFrame(columns=OEE_IWON_TARGET_COLUMNS)
-    raw = clean_columns(raw)
-    for col in OEE_IWON_TARGET_COLUMNS:
-        if col not in raw.columns:
-            raw[col] = ""
-    raw["Year"] = pd.to_numeric(raw["Year"], errors="coerce").fillna(0).astype(int)
-    raw["CW"] = pd.to_numeric(raw["CW"], errors="coerce").fillna(0).astype(int)
-    raw["Target_OEE"] = pd.to_numeric(raw["Target_OEE"], errors="coerce")
-    for col in ["Project", "Process"]:
-        raw[col] = raw[col].astype(str).str.strip()
-    return raw[OEE_IWON_TARGET_COLUMNS].copy()
+    data = pd.concat(frames, ignore_index=True)
+    data["_k"] = data["Project"].str.strip().str.casefold() + "|" + data["Process"].str.strip().str.casefold()
+    data = data.drop_duplicates(subset=["Year", "CW", "_k"], keep="last").drop(columns=["_k"])
+    data["Updated_By"], data["Updated_At"] = "", ""
+    data["Year"] = data["Year"].astype(int)
+    data["CW"] = data["CW"].astype(int)
+    return data[OEE_IWON_TARGET_COLUMNS].reset_index(drop=True)
+
+
+load_oee_iwon_targets.clear = lambda: load_iwon_target_sources.clear()
+
+
+def iwon_targets_writable_ws():
+    """Where the app may save targets: a tab in the app layout (never rewrites a hand-made layout)."""
+    for ws in _iwon_target_tabs():
+        if _is_app_target_layout(_tab_values_unformatted(ws)[:1]):
+            return ws
+    spreadsheet = get_spreadsheet(OEE_IWON_SHEET_ID)
+    ws = spreadsheet.add_worksheet(title="OEE_IWON_TARGETS", rows=2000, cols=10)
+    ws.update("A1:G1", [OEE_IWON_TARGET_COLUMNS])
+    return ws
+
+
+def iwon_targets_editable():
+    """False when the hand-made tab exists in its own layout: then the sheet is the only source."""
+    return not any(src["gid"] == IWON_TARGET_TAB_GID and not src["app_layout"] for src in load_iwon_target_sources())
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -4092,8 +4147,7 @@ def load_oee_iwon_results():
 @_live_reads
 def save_oee_iwon_target(year, cw, project, process, target_oee, updated_by=""):
     """Upsert one weekly target without touching any other target rows."""
-    client = get_client()
-    ws, _ = open_first_existing_worksheet(client, OEE_IWON_SHEET_ID, OEE_IWON_TARGET_SHEET_NAMES)
+    ws = iwon_targets_writable_ws()
     values = ws.get("A:G")
     if not values:
         ws.update("A1:G1", [OEE_IWON_TARGET_COLUMNS])
@@ -4140,9 +4194,11 @@ def save_oee_iwon_target_grid(year, project, process, grid_df, updated_by=""):
     Only columns A:G are managed. Any analysis/formulas to the right of column G are left untouched.
     Blank Target_OEE cells mean that the target for that CW is not defined.
     """
-    client = get_client()
-    ws, _ = open_first_existing_worksheet(client, OEE_IWON_SHEET_ID, OEE_IWON_TARGET_SHEET_NAMES)
-    values = ws.get("A:G")
+    ws = iwon_targets_writable_ws()
+    try:
+        values = ws.get("A:G", value_render_option="UNFORMATTED_VALUE")
+    except TypeError:
+        values = ws.get("A:G")
     if not values:
         values = [OEE_IWON_TARGET_COLUMNS]
         ws.update("A1:G1", [OEE_IWON_TARGET_COLUMNS])
@@ -10675,7 +10731,9 @@ def load_form_downtime_events():
 
 
 def load_all_downtime_events():
-    frames = [f for f in (load_app_downtime_events(), load_form_downtime_events()) if f is not None and not f.empty]
+    """Downtime reasons entered in the app (OEE input). Forms of other departments are
+    not mixed into OEE - the maintenance form is only compared (OEE → Zastoji vs održavanje)."""
+    frames = [f for f in (load_app_downtime_events(),) if f is not None and not f.empty]
     if not frames:
         return oi.normalize_events(None)
     events = pd.concat(frames, ignore_index=True)
@@ -11444,10 +11502,11 @@ def _iwon_scope_mask(df, year, project, process, cws=None):
 
 def _iwon_target_map(year, project, process):
     targets = load_oee_iwon_targets()
+    # 'APP-350' in the sheet = 'APP350' in MASTER_DATA (case, spaces and dashes are ignored)
     scoped = targets[
         (targets["Year"] == int(year))
-        & (targets["Project"].astype(str).str.strip().str.casefold() == str(project).strip().casefold())
-        & (targets["Process"].astype(str).str.strip().str.casefold() == str(process).strip().casefold())
+        & (targets["Project"].map(oi._alnum) == oi._alnum(project))
+        & (targets["Process"].map(oi._alnum) == oi._alnum(process))
     ]
     return {int(r["CW"]): float(r["Target_OEE"]) for _, r in scoped.iterrows()
             if pd.notna(r.get("CW")) and pd.notna(r.get("Target_OEE")) and float(r["Target_OEE"]) > 0}
@@ -11611,22 +11670,48 @@ def render_iwon_admin():
     tab_targets, tab_plan, tab_refresh = st.tabs(["Ciljevi", "Plan i prognoza", "Osveži stvarno"])
 
     with tab_targets:
+        if st.button("🔄 Učitaj ciljeve ponovo iz sheet-a", key="iwon_reload_targets"):
+            load_iwon_target_sources.clear()
+        try:
+            sources = load_iwon_target_sources()
+        except Exception as exc:
+            st.error(f"IWON sheet nije dostupan: {exc}")
+            sources = []
+        with st.expander("Odakle aplikacija čita ciljeve", expanded=not any(src["info"]["used"] for src in sources)):
+            if not sources:
+                st.warning("U IWON sheet-u nije pronađen tab sa ciljevima (ni tab iz linka, ni „Admin podešavanja“).")
+            for src in sources:
+                info = src["info"]
+                st.markdown(f"**Tab „{src['title']}“** (gid {src['gid']}) · raspored: {info['format']} · "
+                            f"zaglavlje u redu {info['header_row']} · pročitano {info['rows']} redova · "
+                            f"**{info['used']} ciljeva**")
+                if info["header"]:
+                    st.caption("Kolone: " + ", ".join(info["header"][:20]))
+                if not src["frame"].empty:
+                    summary = src["frame"].groupby(["Year", "Project", "Process"])["CW"].agg(["min", "max", "count"]).reset_index()
+                    st.dataframe(pd.DataFrame({
+                        "Godina": summary["Year"], "Projekat": summary["Project"], "Proces": summary["Process"],
+                        "Nedelje": [f"CW{a:02d}–CW{b:02d}" for a, b in zip(summary["min"], summary["max"])],
+                        "Ciljeva": summary["count"],
+                    }), use_container_width=True, hide_index=True)
+                if info["skipped"]:
+                    st.caption("Preskočeno: " + "; ".join(info["skipped"][:6]) + (" …" if len(info["skipped"]) > 6 else ""))
         year, project, process = _iwon_scope_selectors("iwon_t", master)
-        targets_df = load_oee_iwon_targets()
-        existing = {
-            int(r["CW"]): float(r["Target_OEE"]) for _, r in targets_df[
-                (targets_df["Year"] == year) & (targets_df["Project"] == str(project)) & (targets_df["Process"] == str(process))
-            ].iterrows() if pd.notna(r.get("CW")) and pd.notna(r.get("Target_OEE"))
-        }
+        existing = _iwon_target_map(year, project, process)
         weeks_count = oi.iso_weeks_in_year(year)
         grid = pd.DataFrame({"CW": list(range(1, weeks_count + 1)),
                              "Target_OEE": [existing.get(cw) for cw in range(1, weeks_count + 1)]})
+        editable = iwon_targets_editable() if sources else True
+        if not editable:
+            st.info("Ciljevi se unose direktno u sheet (tab iz linka). Ovde se samo prikazuju; posle izmene u sheet-u "
+                    "klikni „Učitaj ciljeve ponovo“.")
         edited = st.data_editor(
-            grid, use_container_width=True, hide_index=True, disabled=["CW"], key=f"iwon_grid_{year}_{project}_{process}",
+            grid, use_container_width=True, hide_index=True, disabled=["CW"] if editable else True,
+            key=f"iwon_grid_{year}_{project}_{process}",
             column_config={"Target_OEE": st.column_config.NumberColumn("Ciljni OEE %", min_value=1.0, max_value=99.0,
                                                                         step=0.5, format="%.2f%%")},
         )
-        if st.button("Sačuvaj ciljeve", type="primary", key="iwon_save_targets"):
+        if editable and st.button("Sačuvaj ciljeve", type="primary", key="iwon_save_targets"):
             who = _current_user_display_name()
             count = save_oee_iwon_target_grid(year, project, process, edited, who)
             st.success(f"Sačuvano: {count} nedeljnih ciljeva.")
@@ -11724,22 +11809,53 @@ def render_iwon_view():
         st.error("Ova stranica nije dostupna.")
         st.stop()
     st.caption("🔒 Privatno. Ciljevi, generisanje plana i osvežavanje su u Administration → 🔒 IWON.")
+    if st.button("🔄 Učitaj ponovo iz IWON sheet-a", key="iwon_view_reload"):
+        load_iwon_target_sources.clear()
+        load_oee_iwon_results.clear()
+        load_iwon_tab.clear()
     master, master_missing = load_oee_master()
     if master_missing or master.empty:
         st.error("MASTER_DATA nije dostupan.")
         return
     year, project, process = _iwon_scope_selectors("iwon_v", master)
     saved = _iwon_saved_scopes(year)
-    key = next((k for k in saved if k[0].casefold() == str(project).casefold() and k[1].casefold() == str(process).casefold()), None)
-    weeks = sorted(saved.get(key, set())) if key else []
+    key = next((k for k in saved if oi._alnum(k[0]) == oi._alnum(project) and oi._alnum(k[1]) == oi._alnum(process)), None)
+    planned_weeks = set(saved.get(key, set())) if key else set()
+    try:
+        targets = _iwon_target_map(year, project, process)
+    except Exception as exc:
+        st.error(f"Ciljevi iz IWON sheet-a nisu pročitani: {exc}")
+        targets = {}
+    weeks = sorted(planned_weeks | set(targets))
     if not weeks:
-        st.info(f"Za {project} · {process} u {year}. nema sačuvanog IWON plana.")
-        if saved:
+        st.info(f"Za {project} · {process} u {year}. nema ni cilja ni sačuvanog IWON plana.")
+        all_targets = load_oee_iwon_targets()
+        all_targets = all_targets[all_targets["Year"] == int(year)]
+        if not all_targets.empty:
+            summary = all_targets.groupby(["Project", "Process"])["CW"].agg(["min", "max", "count"]).reset_index()
+            st.markdown("**Ciljevi u sheet-u postoje za:**\n" + "\n".join(
+                f"- {r['Project']} · {r['Process']}: CW{r['min']:02d}–CW{r['max']:02d} ({r['count']} nedelja)"
+                for _, r in summary.iterrows()))
+            st.caption("Ako se naziv projekta ili procesa u sheet-u razlikuje od MASTER_DATA, ispravi ga u sheet-u.")
+        elif saved:
             st.markdown("**Sačuvani planovi postoje za:**\n" + "\n".join(
                 f"- {p} · {q}: CW{min(w):02d}–CW{max(w):02d} ({len(w)} nedelja)" for (p, q), w in sorted(saved.items())))
         else:
-            st.caption("U ovoj godini još nema nijednog plana. Napravi ga u Administration → 🔒 IWON → Plan i prognoza.")
+            st.caption("U ovoj godini aplikacija ne vidi nijedan cilj. Proveri Administration → 🔒 IWON → Ciljevi → "
+                       "„Odakle aplikacija čita ciljeve“.")
         return
+    missing_plans = sorted(set(targets) - planned_weeks)
+    if missing_plans:
+        st.info(f"{len(missing_plans)} nedelja ima cilj, ali plan (A/P/Q po mašini) još nije napravljen: "
+                + ", ".join(f"CW{w:02d}" for w in missing_plans[:12]) + (" …" if len(missing_plans) > 12 else ""))
+        if st.button(f"Napravi plan za tih {len(missing_plans)} nedelja", key="iwon_view_generate", type="primary"):
+            try:
+                with st.spinner("Pravim plan…"):
+                    iwon_generate(year, project, process, missing_plans)
+                load_oee_iwon_results.clear()
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Plan nije napravljen: {exc}")
 
     machines = ["Sve"] + _scope_machines(project, process)
     c1, c2 = st.columns([1, 2])
@@ -11756,8 +11872,8 @@ def render_iwon_view():
     actual_df, _missing = load_oee_input()
     results = load_oee_iwon_results()
     results = results[(results["Year"] == int(year))
-                      & (results["Project"].str.casefold() == str(project).casefold())
-                      & (results["Process"].str.casefold() == str(process).casefold())]
+                      & (results["Project"].map(oi._alnum) == oi._alnum(project))
+                      & (results["Process"].map(oi._alnum) == oi._alnum(process))]
     compare = load_iwon_tab(IWON_COMPARE_SHEET_NAME)
     cmask = _iwon_scope_mask(compare, year, project, process)
     compare = compare[cmask] if len(cmask) else pd.DataFrame()
@@ -11767,6 +11883,8 @@ def render_iwon_view():
         plan = results[(results["CW"] == cw) & (results["Machine"].str.casefold() == scope_machine.casefold())]
         if not plan.empty:
             target = float(plan.iloc[0]["OEE"]) if pd.notna(plan.iloc[0]["OEE"]) else None
+        if target is None and scope_machine == "GLOBAL":
+            target = targets.get(cw)
         if not compare.empty:
             match = compare[(pd.to_numeric(compare["CW"], errors="coerce") == cw)
                             & (compare["Machine"].astype(str).str.casefold() == scope_machine.casefold())]
@@ -11793,10 +11911,14 @@ def render_iwon_view():
     st.dataframe(shown, use_container_width=True, hide_index=True)
 
     st.markdown(f"### CW{week:02d} · plan")
-    try:
-        show_iwon_week_view(year, int(week), project, process, machine)
-    except Exception as exc:
-        st.warning(str(exc))
+    if week in planned_weeks:
+        try:
+            show_iwon_week_view(year, int(week), project, process, machine)
+        except Exception as exc:
+            st.warning(str(exc))
+    else:
+        st.info(f"CW{week:02d} ima cilj {_sr_pct(targets.get(week, 0), 1)}, ali plan po mašini još nije napravljen "
+                "(dugme iznad ili Administration → 🔒 IWON → Plan i prognoza).")
 
     actual_week = oi.actual_for_week(actual_df, year, week, project, process, aggregate_oee)
     week_plan = results[results["CW"] == week]
@@ -11904,6 +12026,8 @@ def render_oee_settings_admin(can_edit):
         else:
             st.warning(f"E-mail nije poslat: {result}")
 
+    render_machine_map_admin(can_edit)
+
     st.markdown("#### Uzroci zastoja")
     st.caption("„ređe“ = gubitak se smanjuje tako da se ređe dešava (kvarovi); „kraće“ = da kraće traje (zamene, podešavanja). "
                "Obrisan uzrok se samo isključuje, stari podaci ostaju.")
@@ -11923,6 +12047,322 @@ def render_oee_settings_admin(can_edit):
             st.success("Lista uzroka je sačuvana.")
         except Exception as exc:
             st.error(f"Uzroci nisu sačuvani: {exc}")
+
+
+# =========================
+# v11.3: MAINTENANCE FORM vs DOWNTIME IN OEE (comparison only; OEE is still calculated from the OEE input)
+# =========================
+MAINT_FORM_TAB_NAMES = ["Form_Responses", "Form Responses"]
+MAINT_FORM_TAB_GID = 2121542464
+MAINT_MAP_SHEET_NAME = "MAINT_MACHINE_MAP"
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def load_maintenance_values():
+    """All rows of the maintenance downtime form (read-only; the app is a viewer)."""
+    spreadsheet = get_spreadsheet(PROCESS_DOWNTIME_SHEET_ID)
+    ws = None
+    for name in MAINT_FORM_TAB_NAMES:
+        try:
+            ws = spreadsheet.worksheet(name)
+            break
+        except gspread.exceptions.WorksheetNotFound:
+            continue
+    if ws is None and hasattr(spreadsheet, "get_worksheet_by_id"):
+        ws = spreadsheet.get_worksheet_by_id(MAINT_FORM_TAB_GID)
+    if ws is None:
+        raise gspread.exceptions.WorksheetNotFound("Form_Responses")
+    return ws.get_all_values()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_machine_map():
+    try:
+        _, _, df = _tab_frame(OEE_SHEET_ID, MAINT_MAP_SHEET_NAME, oi.MAINT_MAP_COLUMNS)
+        return df.drop(columns=["_row"], errors="ignore")
+    except Exception:
+        return pd.DataFrame(columns=oi.MAINT_MAP_COLUMNS)
+
+
+def save_machine_map(records):
+    ws, headers, df = _tab_frame(OEE_SHEET_ID, MAINT_MAP_SHEET_NAME, oi.MAINT_MAP_COLUMNS, live=True)
+    who = _current_user_display_name()
+    now = _now_local().strftime("%Y-%m-%d %H:%M:%S")
+    rows = [{**r, "Updated_By": who, "Updated_At": now} for r in records]
+    _upsert_tab_rows(ws, headers, oi.MAINT_MAP_COLUMNS, df, ["Form_Project", "Form_Machine"], rows)
+    load_machine_map.clear()
+
+
+def maintenance_events():
+    """(events, mapping, error) - maintenance records mapped to OEE machines."""
+    try:
+        values = load_maintenance_values()
+    except Exception as exc:
+        return pd.DataFrame(columns=oi.MAINT_EVENT_COLUMNS), {}, f"{type(exc).__name__}: {exc}"
+    master, _missing = load_oee_master()
+    mapping = oi.auto_machine_map(oi.maintenance_machine_pairs(values), master, load_machine_map())
+    return oi.maintenance_rows_to_events(values, mapping), mapping, None
+
+
+def _period_bounds(view, value):
+    if view == "Dan":
+        start = pd.Timestamp(value).normalize()
+        return start, start
+    if view == "Nedelja":
+        start = oi.week_start(*value)
+        return start, start + pd.Timedelta(days=6)
+    if view == "Mesec":
+        start = pd.Timestamp(value[0], value[1], 1)
+        return start, start + pd.offsets.MonthEnd(0)
+    return pd.Timestamp(int(value), 1, 1), pd.Timestamp(int(value), 12, 31)
+
+
+def render_downtime_compare_page():
+    st.caption("OEE se i dalje računa samo iz OEE unosa. Ova strana poredi zastoje upisane u OEE sa zastojima "
+               "koje je održavanje upisalo u svoju formu, za istu mašinu i isti dan (noćna smena posle ponoći "
+               "pripada prethodnom danu, isto kao u OEE unosu).")
+    events, mapping, error = maintenance_events()
+    if error:
+        st.error("Forma održavanja nije dostupna. Proveri da je aplikacija (service account) dodata kao Viewer "
+                 f"i da tab „Form_Responses“ postoji. Detalj: {error}")
+        return
+    try:
+        oee_df, _missing = load_oee_input()
+    except Exception as exc:
+        st.error(f"OEE unos nije dostupan: {exc}")
+        return
+    master, _missing = load_oee_master()
+
+    dates = set()
+    if oee_df is not None and not oee_df.empty:
+        dates |= set(pd.to_datetime(oee_df["Datum"], errors="coerce").dt.normalize().dropna())
+    if not events.empty:
+        dates |= set(pd.to_datetime(events["Datum"], errors="coerce").dropna())
+    if not dates:
+        st.info("Još nema ni OEE unosa ni zapisa održavanja.")
+        return
+    dates = sorted(dates)
+
+    c_view, c_period, c_planned = st.columns([2, 2, 2])
+    with c_view:
+        view = st.radio("Prikaz", ["Dan", "Nedelja", "Mesec", "Godina"], index=1, horizontal=True, key="mt_view")
+    with c_period:
+        if view == "Dan":
+            options = [d.date() for d in dates]
+            fmt = lambda d: pd.Timestamp(d).strftime("%d.%m.%Y")
+        elif view == "Nedelja":
+            options = sorted({(int(d.isocalendar()[0]), int(d.isocalendar()[1])) for d in dates})
+            fmt = lambda x: f"{x[0]}-CW{x[1]:02d}"
+        elif view == "Mesec":
+            options = sorted({(d.year, d.month) for d in dates})
+            fmt = lambda x: f"{_SR_MONTHS[x[1] - 1]} {x[0]}"
+        else:
+            options = sorted({d.year for d in dates})
+            fmt = str
+        key = f"mt_period_{view}"
+        if st.session_state.get(key) not in options:
+            st.session_state[key] = options[-1]
+        period = st.selectbox("Period", options, key=key, format_func=fmt)
+    with c_planned:
+        st.write("")
+        include_planned = st.checkbox("Uračunaj i planirane zastoje održavanja", key="mt_planned")
+    start, end = _period_bounds(view, period)
+
+    scopes = master[["Project", "Process", "Machine"]].drop_duplicates().astype(str) if not master.empty else pd.DataFrame()
+    c_project, c_process, c_machine = st.columns(3)
+    with c_project:
+        project = st.selectbox("Projekat", ["Svi"] + sorted(scopes["Project"].unique().tolist()), key="mt_project")
+    process_pool = scopes if project == "Svi" else scopes[scopes["Project"] == project]
+    with c_process:
+        process = st.selectbox("Proces", ["Svi"] + sorted(process_pool["Process"].unique().tolist()), key="mt_process")
+    machine_pool = process_pool if process == "Svi" else process_pool[process_pool["Process"] == process]
+    with c_machine:
+        machine = st.selectbox("Mašina", ["Sve"] + sorted(machine_pool["Machine"].unique().tolist()), key="mt_machine")
+
+    def scope_filter(df):
+        if df is None or df.empty:
+            return df
+        out = df[(pd.to_datetime(df["Datum"], errors="coerce").dt.normalize() >= start)
+                 & (pd.to_datetime(df["Datum"], errors="coerce").dt.normalize() <= end)]
+        if project != "Svi":
+            out = out[out["Project"].astype(str) == project]
+        if process != "Svi":
+            out = out[out["Process"].astype(str) == process]
+        if machine != "Sve":
+            out = out[out["Machine"].astype(str) == machine]
+        return out
+
+    oee_period = scope_filter(oee_df) if oee_df is not None and not oee_df.empty else pd.DataFrame()
+    period_events = events[(events["Datum"] >= start) & (events["Datum"] <= end)] if not events.empty else events
+    unmapped = period_events[period_events["Machine"] == ""] if not period_events.empty else period_events
+    mapped = scope_filter(period_events[period_events["Machine"] != ""]) if not period_events.empty else period_events
+    if unmapped is not None and not unmapped.empty:
+        ignored = {k for k, v in mapping.items() if v is None}
+        open_ones = unmapped[[(oi._alnum(p), oi._alnum(m)) not in ignored for p, m in zip(unmapped["Form_Project"], unmapped["Form_Machine"])]]
+        if not open_ones.empty:
+            names = sorted({f"{p} · {m}" for p, m in zip(open_ones["Form_Project"], open_ones["Form_Machine"])})
+            st.warning(f"{len(open_ones)} zapisa održavanja ({_sr_num(round(open_ones['Minutes'].sum()))} min) nije povezano sa OEE mašinom: "
+                       + ", ".join(names[:8]) + (" …" if len(names) > 8 else "")
+                       + ". Poveži ih u Administration → OEE podešavanja → Mašine iz forme održavanja.")
+
+    comparison = oi.compare_downtime(oee_period, mapped, include_planned=include_planned)
+    if comparison.empty:
+        st.info("Za izabrani period i filtere nema ni OEE zastoja ni zapisa održavanja.")
+        return
+    days = comparison[(comparison["OEE_Shifts"] > 0) | (comparison["Maint_Count"] > 0)]
+    ok_days = int((days["Status"] == "slaže se").sum())
+    oee_total, maint_total = float(comparison["OEE_Down"].sum()), float(comparison["Maint_Min"].sum())
+    diff_total = oee_total - maint_total
+    st.markdown(ui.stat_tiles_html([
+        {"label": "Zastoj upisan u OEE", "value": f"{_sr_num(round(oee_total))} min", "status": "neutral",
+         "sub": f"organizacioni gubici još {_sr_num(round(comparison['OEE_Org'].sum()))} min"},
+        {"label": "Zastoj po formi održavanja", "value": f"{_sr_num(round(maint_total))} min", "status": "neutral",
+         "sub": f"{int(comparison['Maint_Count'].sum())} intervencija"
+                + ("" if include_planned else f" · planirani {_sr_num(round(comparison['Maint_Planned_Min'].sum()))} min nisu uračunati")},
+        {"label": "Razlika (OEE − održavanje)", "value": f"{'+' if diff_total > 0 else ''}{_sr_num(round(diff_total))} min",
+         "status": "ok" if abs(diff_total) <= max(5, 0.1 * max(oee_total, maint_total)) else "warn"},
+        {"label": "Mašina-dana koja se slažu", "value": f"{ok_days} od {len(days)}",
+         "status": "ok" if ok_days == len(days) else ("warn" if ok_days >= len(days) / 2 else "alarm"),
+         "sub": "tolerancija 5 min ili 10 %"},
+    ]), unsafe_allow_html=True)
+
+    work = comparison.copy()
+    if view == "Godina":
+        work["_x"] = work["Datum"].dt.month.map(lambda m: _SR_MONTHS[m - 1])
+        order = [_SR_MONTHS[m - 1] for m in sorted(work["Datum"].dt.month.unique())]
+        x_title = "Mesec"
+    elif view == "Dan":
+        work["_x"] = work["Machine"].astype(str)
+        order = sorted(work["_x"].unique())
+        x_title = "Mašina"
+    else:
+        work["_x"] = work["Datum"].map(lambda d: f"{_SR_WEEKDAYS[d.weekday()]} {d:%d.%m}")
+        order = [f"{_SR_WEEKDAYS[d.weekday()]} {d:%d.%m}" for d in sorted(work["Datum"].unique())]
+        x_title = "Dan"
+    by_x = oi.summarize_comparison(work, ["_x"]).set_index("_x").reindex(order).fillna(0).reset_index()
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=by_x["_x"].tolist(), y=by_x["OEE_Down"].tolist(), name="OEE unos", marker=dict(color="#22D3EE"),
+                         text=[_sr_num(round(v)) for v in by_x["OEE_Down"]], textposition="outside"))
+    fig.add_trace(go.Bar(x=by_x["_x"].tolist(), y=by_x["Maint_Min"].tolist(), name="Forma održavanja", marker=dict(color="#F59E0B"),
+                         text=[_sr_num(round(v)) for v in by_x["Maint_Min"]], textposition="outside"))
+    fig = style_chart(fig)
+    fig.update_layout(title=dict(text=f"Zastoj (min): OEE unos naspram forme održavanja · {fmt(period)}"), barmode="group",
+                      height=380, showlegend=True)
+    fig.update_xaxes(type="category", title=x_title)
+    fig.update_yaxes(title="min")
+    st.plotly_chart(fig, use_container_width=True, key="mt_compare_chart")
+
+    st.markdown("### Po mašini")
+    per_machine = oi.summarize_comparison(comparison, ["Project", "Process", "Machine"])
+    per_machine["Razlika"] = per_machine["Diff"]
+    st.dataframe(pd.DataFrame({
+        "Projekat": per_machine["Project"], "Proces": per_machine["Process"], "Mašina": per_machine["Machine"],
+        "OEE zastoj (min)": per_machine["OEE_Down"].round(0), "Održavanje (min)": per_machine["Maint_Min"].round(0),
+        "Razlika OEE − održ. (min)": per_machine["Diff"].round(0), "Intervencija": per_machine["Maint_Count"].astype(int),
+        "Dana se slaže": [f"{int(o)} / {int(d)}" for o, d in zip(per_machine["Days_OK"], per_machine["Days"])],
+    }).sort_values("Razlika OEE − održ. (min)", key=lambda s: s.abs(), ascending=False),
+        use_container_width=True, hide_index=True)
+
+    st.markdown("### Po mašini i danu")
+    only_diff = st.checkbox("Prikaži samo dane sa razlikom", value=True, key="mt_only_diff")
+    detail = comparison if not only_diff else comparison[comparison["Status"] != "slaže se"]
+    st.dataframe(pd.DataFrame({
+        "Datum": detail["Datum"].dt.strftime("%d.%m.%Y"), "Mašina": detail["Machine"], "Proces": detail["Process"],
+        "OEE zastoj": detail["OEE_Down"].round(0), "Održavanje": detail["Maint_Min"].round(0),
+        "Razlika": detail["Diff"].round(0), "Intervencija": detail["Maint_Count"].astype(int), "Status": detail["Status"],
+    }), use_container_width=True, hide_index=True)
+
+    choices = [(r["Datum"], r["Project"], r["Process"], r["Machine"]) for _, r in detail.iterrows()]
+    if not choices:
+        return
+    st.markdown("### Detalj jednog dana")
+    pick = st.selectbox("Mašina i dan", choices, key="mt_detail",
+                        format_func=lambda c: f"{c[0]:%d.%m.%Y} · {c[3]} ({c[2]})")
+    day, d_project, d_process, d_machine = pick
+    left, right = st.columns(2)
+    with left:
+        st.markdown("**Upisano u OEE**")
+        rows = oee_df[(pd.to_datetime(oee_df["Datum"]).dt.normalize() == day) & (oee_df["Machine"].astype(str) == d_machine)
+                      & (oee_df["Process"].astype(str) == d_process)]
+        if rows.empty:
+            st.caption("Za ovaj dan nema OEE unosa.")
+        else:
+            st.dataframe(pd.DataFrame({"Smena": rows["Shift"], "Zastoj (min)": rows["Down time"],
+                                       "Org. gubici (min)": rows["Organisational loss"], "Upisao": rows["Submitted_By"]}),
+                         use_container_width=True, hide_index=True)
+        reasons = load_all_downtime_events()
+        if not reasons.empty:
+            reasons = reasons[(reasons["Datum"] == day) & (reasons["Machine"] == d_machine) & (reasons["Process"] == d_process)]
+        if reasons is not None and not reasons.empty:
+            st.dataframe(pd.DataFrame({"Smena": reasons["Shift"], "Razlog": reasons["Cause"], "Min": reasons["Minutes"],
+                                       "Vrsta": reasons["Loss_Type"]}), use_container_width=True, hide_index=True)
+    with right:
+        st.markdown("**Upisalo održavanje**")
+        records = mapped[(mapped["Datum"] == day) & (mapped["Machine"] == d_machine) & (mapped["Process"] == d_process)]
+        if records.empty:
+            st.caption("Održavanje za ovaj dan nema zapis.")
+        else:
+            st.dataframe(pd.DataFrame({
+                "Od–do": records["Start_Time"] + "–" + records["End_Time"], "Min": records["Minutes"],
+                "Stanica": records["Station"], "Uzrok": records["Category"], "Tip": records["Type"],
+                "Razlog": records["Reason"], "Rešenje": records["Solution"], "Upisao": records["Name"],
+            }), use_container_width=True, hide_index=True)
+
+
+def render_machine_map_admin(can_edit):
+    st.markdown("#### Mašine iz forme održavanja")
+    st.caption("Forma održavanja piše mašine drugačije (npr. „APP-350 · ROTOR L1“). Ovde se jednom poveže svaka "
+               "mašina iz forme sa OEE mašinom. Gde je naziv jednoznačan, veza je već predložena.")
+    try:
+        values = load_maintenance_values()
+    except Exception as exc:
+        st.warning(f"Forma održavanja nije dostupna: {exc}")
+        return
+    master, _missing = load_oee_master()
+    pairs = oi.maintenance_machine_pairs(values)
+    if pairs.empty:
+        st.info("U formi održavanja još nema zapisa sa mašinom.")
+        return
+    mapping = oi.auto_machine_map(pairs, master, load_machine_map())
+    options = [oi.MAP_IGNORE] + [f"{p} · {q} · {m}" for p, q, m in
+                                 master[["Project", "Process", "Machine"]].drop_duplicates().astype(str).itertuples(index=False)]
+    current = []
+    for pair in pairs.to_dict("records"):
+        target = mapping.get((oi._alnum(pair["Form_Project"]), oi._alnum(pair["Form_Machine"])), "missing")
+        if target == "missing":
+            label = None
+        elif target is None:
+            label = oi.MAP_IGNORE
+        else:
+            label = f"{target[0]} · {target[1]} · {target[2]}"
+        current.append({"Projekat u formi": pair["Form_Project"], "Mašina u formi": pair["Form_Machine"],
+                        "Zapisa": int(pair["Records"]), "OEE mašina": label})
+    edited = st.data_editor(
+        pd.DataFrame(current), hide_index=True, use_container_width=True, key="maint_map_editor",
+        disabled=["Projekat u formi", "Mašina u formi", "Zapisa"],
+        column_config={"OEE mašina": st.column_config.SelectboxColumn("OEE mašina", options=options)},
+    )
+    missing = int(edited["OEE mašina"].isna().sum()) if "OEE mašina" in edited.columns else 0
+    if missing:
+        st.caption(f"Bez veze: {missing} mašina iz forme (njihovi zastoji se ne porede).")
+    if st.button("Sačuvaj veze mašina", disabled=not can_edit, key="maint_map_save"):
+        records = []
+        for row in edited.to_dict("records"):
+            label = row.get("OEE mašina")
+            if not label:
+                continue
+            if label == oi.MAP_IGNORE:
+                records.append({"Form_Project": row["Projekat u formi"], "Form_Machine": row["Mašina u formi"],
+                                "OEE_Project": "", "OEE_Process": "", "OEE_Machine": oi.MAP_IGNORE})
+            else:
+                p, q, m = [part.strip() for part in str(label).split(" · ", 2)]
+                records.append({"Form_Project": row["Projekat u formi"], "Form_Machine": row["Mašina u formi"],
+                                "OEE_Project": p, "OEE_Process": q, "OEE_Machine": m})
+        try:
+            save_machine_map(records)
+            st.success(f"Sačuvano {len(records)} veza.")
+        except Exception as exc:
+            st.error(f"Veze nisu sačuvane: {exc}")
 
 
 def show_oee_clean_view(period_base, metric_col, machine_filter, period_label, trend_group_cols, trend_x_col, key_prefix, page_name=None, ctx=None):
@@ -12093,6 +12533,7 @@ if selected_module == "OEE":
     oee_pages = ["Dashboard", "Daily", "Weekly", "Monthly", "Yearly", "Machine Ranking", "Raw Data"]
     if can_edit_oee:
         oee_pages.insert(0, "OEE Input")
+    oee_pages.insert(oee_pages.index("Raw Data"), "Maintenance")
     if can_see_iwon():
         oee_pages.append("IWON")
     if st.session_state.get("oee_page_selector") not in oee_pages:
@@ -12100,7 +12541,7 @@ if selected_module == "OEE":
     oee_page_labels = {
         "OEE Input": "✍️ Unos", "Dashboard": "📊 Dashboard", "Daily": "Dnevno", "Weekly": "Nedeljno",
         "Monthly": "Mesečno", "Yearly": "Godišnje", "Machine Ranking": "🏆 Rang mašina", "Raw Data": "🗂 Podaci",
-        "IWON": "🔒 IWON",
+        "IWON": "🔒 IWON", "Maintenance": "🔧 Zastoji vs održavanje",
     }
     oee_page = st.radio("OEE page", oee_pages, horizontal=True, label_visibility="collapsed", key="oee_page_selector",
                         format_func=lambda page: oee_page_labels.get(page, page))
@@ -12108,6 +12549,10 @@ if selected_module == "OEE":
 
     if oee_page == "IWON":
         render_iwon_view()
+        st.stop()
+    if oee_page == "Maintenance":
+        st.subheader("Zastoji: OEE unos naspram forme održavanja")
+        render_downtime_compare_page()
         st.stop()
 
     if oee_page == "OEE Input":

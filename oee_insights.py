@@ -956,3 +956,385 @@ def actual_cause_week(events: pd.DataFrame, year, cw, machine, cause) -> tuple:
         return 0, 0.0, 0.0
     total = float(frame["Minutes"].sum())
     return int(len(frame)), total / len(frame), total
+
+
+# ---------------------------------------------------------------------------
+# Maintenance downtime form (održavanje) vs downtime entered in OEE
+# ---------------------------------------------------------------------------
+MAINT_EVENT_COLUMNS = [
+    "Datum", "Start_Time", "End_Time", "Minutes", "Form_Project", "Form_Machine", "Project", "Process", "Machine",
+    "Station", "Category", "Type", "Planned", "Reason", "Solution", "Name", "Row",
+]
+MAINT_MAP_COLUMNS = ["Form_Project", "Form_Machine", "OEE_Project", "OEE_Process", "OEE_Machine", "Updated_By", "Updated_At"]
+MAP_IGNORE = "(ne prati se u OEE)"
+
+
+def _alnum(text) -> str:
+    return re.sub(r"[^a-z0-9]+", "", _fold(text))
+
+
+def _initials_key(text) -> str:
+    """'ROTOR L1' -> 'rl1', 'RL 1' -> 'rl1', 'DMC L4' -> 'dl4' (short machine names)."""
+    words = re.findall(r"[a-z]+|\d+", _fold(text))
+    # long words shrink to their first letter, short ones ('rl', 'dmc', 'l') stay as they are
+    return "".join(w if w.isdigit() or len(w) <= 3 else w[0] for w in words)
+
+
+def _duration_minutes(text) -> float:
+    raw = str(text or "").strip()
+    if not raw:
+        return 0.0
+    match = re.match(r"^(\d+):(\d{1,2})(?::(\d{1,2}))?$", raw)
+    if match:
+        return int(match.group(1)) * 60 + int(match.group(2)) + (int(match.group(3) or 0) / 60.0)
+    number = pd.to_numeric(raw.replace(",", "."), errors="coerce")
+    if pd.isna(number):
+        return 0.0
+    # Google can return a duration as a fraction of a day (0.0208 = 30 min).
+    return float(number) * 24 * 60 if 0 < float(number) < 1 else float(number)
+
+
+def _clock(text):
+    match = re.match(r"^\s*(\d{1,2})[:.](\d{2})", str(text or ""))
+    return (int(match.group(1)) % 24, int(match.group(2)) % 60) if match else None
+
+
+def maintenance_rows_to_events(values, mapping=None) -> pd.DataFrame:
+    """Rows of the maintenance Google Form (list of lists incl. header) -> downtime records.
+
+    The form has a block of columns per project ('PROJEKAT APP350', 'PROJEKAT EMR4' …)
+    with the line (ROTOR L6, DMC L4 …) and 'OP STANICE …' columns with the station.
+    Rows without 'DATUM PROBLEMA' (e.g. preventive-maintenance entries) are skipped.
+    A downtime that starts before 06:00 belongs to the night shift of the previous day,
+    the same rule the OEE input uses.
+    mapping: {(alnum form project, alnum form machine): (project, process, machine) or None}
+    """
+    if not values or len(values) < 2:
+        return pd.DataFrame(columns=MAINT_EVENT_COLUMNS)
+    header = [str(h or "").strip() for h in values[0]]
+    folded = [_fold(h) for h in header]
+
+    def first(*names):
+        for name in names:
+            key = _fold(name)
+            for index, head in enumerate(folded):
+                if head == key:
+                    return index
+        for name in names:
+            key = _fold(name)
+            for index, head in enumerate(folded):
+                if key and head.startswith(key):
+                    return index
+        return None
+
+    i_date = first("DATUM PROBLEMA")
+    i_project = first("Projekat")
+    i_start = first("POČETAK ZASTOJA")
+    i_end = first("ZAVRŠETAK ZASTOJA")
+    i_minutes = first("VREME ZASTOJA")
+    i_category = first("UZROK ZASTOJA")
+    i_type = first("TIP ZASTOJA")
+    i_reason = first("RAZLOG ZASTOJA", "RALOG ZASTOJA")
+    i_solution = first("REŠENJE ZASTOJA")
+    i_name = first("IME")
+    machine_cols = [i for i, h in enumerate(folded) if h.startswith("projekat ")]
+    station_cols = [i for i, h in enumerate(folded) if h.startswith("op stanice") or h.startswith("op  stanice")]
+    if i_date is None:
+        return pd.DataFrame(columns=MAINT_EVENT_COLUMNS)
+    mapping = mapping or {}
+
+    def cell(row, index):
+        return str(row[index]).strip() if index is not None and index < len(row) else ""
+
+    records = []
+    for number, row in enumerate(values[1:], start=2):
+        day = _parse_date(cell(row, i_date))
+        if pd.isna(day):
+            continue
+        machine = next((cell(row, i) for i in machine_cols if cell(row, i)), "")
+        if not machine:
+            continue
+        start, end = cell(row, i_start), cell(row, i_end)
+        minutes = _duration_minutes(cell(row, i_minutes))
+        if minutes <= 0 and _clock(start) and _clock(end):
+            minutes = _minutes_between(start, end)
+        if minutes <= 0:
+            continue
+        clock = _clock(start)
+        if clock and clock[0] < 6:
+            day = day - pd.Timedelta(days=1)  # night shift of the previous day
+        form_project = cell(row, i_project)
+        target = mapping.get((_alnum(form_project), _alnum(machine)))
+        kind = cell(row, i_type)
+        records.append({
+            "Datum": day, "Start_Time": start[:5], "End_Time": end[:5], "Minutes": round(float(minutes), 2),
+            "Form_Project": form_project, "Form_Machine": machine,
+            "Project": target[0] if target else "", "Process": target[1] if target else "", "Machine": target[2] if target else "",
+            "Station": next((cell(row, i) for i in station_cols if cell(row, i)), ""),
+            "Category": cell(row, i_category), "Type": kind, "Planned": _fold(kind).startswith("planir"),
+            "Reason": cell(row, i_reason), "Solution": cell(row, i_solution), "Name": cell(row, i_name), "Row": number,
+        })
+    return pd.DataFrame(records, columns=MAINT_EVENT_COLUMNS)
+
+
+def maintenance_machine_pairs(values) -> pd.DataFrame:
+    """Distinct (form project, form machine) with the number of records - for the mapping table."""
+    events = maintenance_rows_to_events(values)
+    if events.empty:
+        return pd.DataFrame(columns=["Form_Project", "Form_Machine", "Records"])
+    events["_p"], events["_m"] = events["Form_Project"].map(_alnum), events["Form_Machine"].map(_alnum)
+    grouped = events.groupby(["_p", "_m"]).agg(Form_Project=("Form_Project", "first"), Form_Machine=("Form_Machine", "first"),
+                                               Records=("Minutes", "count")).reset_index(drop=True)
+    return grouped.sort_values(["Form_Project", "Form_Machine"]).reset_index(drop=True)
+
+
+def auto_machine_map(pairs: pd.DataFrame, master: pd.DataFrame, saved: pd.DataFrame | None = None) -> dict:
+    """Form machine -> OEE machine. Saved choices win; otherwise a unique name match.
+
+    Names are compared without case/spaces/dashes ('APP-350' = 'APP350',
+    'ROTOR L1' = 'Rotor L1') and by initials ('ROTOR L1' = 'RL 1'). When a name
+    fits more than one OEE process it stays unmapped (to be chosen in Administration).
+    """
+    result = {}
+    if saved is not None and not saved.empty:
+        for row in saved.to_dict("records"):
+            key = (_alnum(row.get("Form_Project")), _alnum(row.get("Form_Machine")))
+            machine = str(row.get("OEE_Machine", "") or "").strip()
+            if machine == MAP_IGNORE:
+                result[key] = None
+            elif machine:
+                result[key] = (str(row.get("OEE_Project", "")).strip(), str(row.get("OEE_Process", "")).strip(), machine)
+    if pairs is None or pairs.empty or master is None or master.empty:
+        return result
+    rows = master[["Project", "Process", "Machine"]].drop_duplicates().astype(str)
+    for pair in pairs.to_dict("records"):
+        key = (_alnum(pair["Form_Project"]), _alnum(pair["Form_Machine"]))
+        if key in result:
+            continue
+        same_project = rows[rows["Project"].map(_alnum) == key[0]]
+        pool = same_project if not same_project.empty else rows
+        exact = pool[pool["Machine"].map(_alnum) == key[1]]
+        if exact.empty:
+            exact = pool[pool["Machine"].map(_initials_key) == _initials_key(pair["Form_Machine"])]
+        if len(exact) == 1:
+            found = exact.iloc[0]
+            result[key] = (found["Project"], found["Process"], found["Machine"])
+    return result
+
+
+def oee_downtime_by_machine_day(oee_rows: pd.DataFrame) -> pd.DataFrame:
+    """Down time and org. loss entered in OEE, per machine and day (all shifts summed)."""
+    columns = ["Datum", "Project", "Process", "Machine", "OEE_Down", "OEE_Org", "OEE_Shifts"]
+    if oee_rows is None or oee_rows.empty:
+        return pd.DataFrame(columns=columns)
+    rows = oee_rows.copy()
+    rows["Datum"] = pd.to_datetime(rows["Datum"], errors="coerce").dt.normalize()
+    rows["_down"] = pd.to_numeric(rows["Down time"], errors="coerce").fillna(0)
+    rows["_org"] = pd.to_numeric(rows["Organisational loss"], errors="coerce").fillna(0)
+    grouped = rows.groupby(["Datum", "Project", "Process", "Machine"]).agg(
+        OEE_Down=("_down", "sum"), OEE_Org=("_org", "sum"), OEE_Shifts=("_down", "count")).reset_index()
+    return grouped[columns]
+
+
+def compare_downtime(oee_rows: pd.DataFrame, maint_events: pd.DataFrame, include_planned=False,
+                     tolerance_min=5.0, tolerance_share=0.10) -> pd.DataFrame:
+    """Per machine and day: minutes in OEE vs minutes in the maintenance form and the difference.
+
+    Difference = OEE − maintenance. A day/machine is 'slaže se' when the
+    difference is at most max(5 min, 10 %). Only mapped maintenance records are used.
+    """
+    columns = ["Datum", "Project", "Process", "Machine", "OEE_Down", "OEE_Org", "OEE_Shifts", "Maint_Min",
+               "Maint_Planned_Min", "Maint_Count", "Diff", "Status"]
+    oee = oee_downtime_by_machine_day(oee_rows)
+    maint = maint_events if maint_events is not None else pd.DataFrame(columns=MAINT_EVENT_COLUMNS)
+    maint = maint[maint["Machine"].astype(str).str.strip() != ""] if not maint.empty else maint
+    if not maint.empty:
+        maint = maint.copy()
+        maint["Datum"] = pd.to_datetime(maint["Datum"], errors="coerce").dt.normalize()
+        maint["_unplanned"] = maint["Minutes"].where(~maint["Planned"].astype(bool), 0.0)
+        maint["_planned"] = maint["Minutes"].where(maint["Planned"].astype(bool), 0.0)
+        maint_day = maint.groupby(["Datum", "Project", "Process", "Machine"]).agg(
+            Maint_Unplanned=("_unplanned", "sum"), Maint_Planned_Min=("_planned", "sum"),
+            Maint_Count=("Minutes", "count")).reset_index()
+    else:
+        maint_day = pd.DataFrame(columns=["Datum", "Project", "Process", "Machine", "Maint_Unplanned", "Maint_Planned_Min", "Maint_Count"])
+    merged = oee.merge(maint_day, on=["Datum", "Project", "Process", "Machine"], how="outer")
+    if merged.empty:
+        return pd.DataFrame(columns=columns)
+    for col in ("OEE_Down", "OEE_Org", "OEE_Shifts", "Maint_Unplanned", "Maint_Planned_Min", "Maint_Count"):
+        merged[col] = pd.to_numeric(merged[col], errors="coerce").fillna(0)
+    merged["Maint_Min"] = merged["Maint_Unplanned"] + (merged["Maint_Planned_Min"] if include_planned else 0)
+    merged["Diff"] = merged["OEE_Down"] - merged["Maint_Min"]
+
+    def status(row):
+        if row["OEE_Shifts"] == 0:
+            return "nema OEE unosa"
+        limit = max(tolerance_min, tolerance_share * max(row["OEE_Down"], row["Maint_Min"]))
+        if abs(row["Diff"]) <= limit:
+            return "slaže se"
+        if row["Maint_Min"] == 0:
+            return "u OEE zastoj, održavanje nema zapis"
+        if row["OEE_Down"] == 0:
+            return "održavanje ima zastoj, u OEE 0"
+        return "OEE više" if row["Diff"] > 0 else "održavanje više"
+
+    merged["Status"] = merged.apply(status, axis=1)
+    return merged.sort_values(["Datum", "Project", "Process", "Machine"]).reset_index(drop=True)[columns]
+
+
+def summarize_comparison(compare: pd.DataFrame, by: list) -> pd.DataFrame:
+    """Sum a machine-day comparison over any grouping (machine, week, month …)."""
+    if compare is None or compare.empty:
+        return pd.DataFrame(columns=by + ["OEE_Down", "Maint_Min", "Maint_Planned_Min", "Maint_Count", "Diff", "Days", "Days_OK"])
+    work = compare.copy()
+    work["_ok"] = (work["Status"] == "slaže se").astype(int)
+    work["_day"] = (work["OEE_Shifts"] > 0) | (work["Maint_Count"] > 0)
+    out = work.groupby(by).agg(OEE_Down=("OEE_Down", "sum"), Maint_Min=("Maint_Min", "sum"),
+                               Maint_Planned_Min=("Maint_Planned_Min", "sum"), Maint_Count=("Maint_Count", "sum"),
+                               Diff=("Diff", "sum"), Days=("_day", "sum"), Days_OK=("_ok", "sum")).reset_index()
+    return out
+
+
+# ---------------------------------------------------------------------------
+# IWON targets typed by hand in Google Sheets (any reasonable layout)
+# ---------------------------------------------------------------------------
+_TARGET_HEADERS = {
+    "year": {"year", "godina", "god", "yr", "jahr"},
+    "cw": {"cw", "kw", "week", "nedelja", "sedmica", "cwnr", "cwbroj", "wk"},
+    "project": {"project", "projekat", "proj", "projekti"},
+    "process": {"process", "proces", "procesa", "linija"},
+    "target": {"targetoee", "target", "oeetarget", "cilj", "ciljoee", "iwon", "iwontarget", "targetoeeprocenat",
+               "targetiwon", "iwonoee", "oeeiwon", "targetoeepct"},
+}
+
+
+def _week_number(value):
+    """'CW43', 'KW 7', 'W05', '43', 43.0 -> 43 (1..53) or None."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)) and not (isinstance(value, float) and math.isnan(value)):
+        number = int(value) if float(value).is_integer() else None
+    else:
+        match = re.fullmatch(r"(?:cw|kw|w|week|nedelja)?\s*0*(\d{1,2})", _fold(value).replace(" ", "")) if str(value).strip() else None
+        number = int(match.group(1)) if match else None
+    return number if number and 1 <= number <= 53 else None
+
+
+def parse_target_value(value):
+    """'85', '85,5', '85 %', 0.85 (percent-formatted cell) -> 85.0 / 85.5 / 85.0; None when not a target."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        number = float(value)
+    else:
+        text = str(value).strip().replace(" ", "").replace(" ", "").replace("%", "")
+        if not text:
+            return None
+        if text.count(",") == 1 and text.count(".") == 0:
+            text = text.replace(",", ".")
+        elif text.count(",") and text.count("."):
+            text = text.replace(".", "").replace(",", ".") if text.rfind(",") > text.rfind(".") else text.replace(",", "")
+        try:
+            number = float(text)
+        except ValueError:
+            return None
+    if math.isnan(number) or number <= 0:
+        return None
+    if number <= 1.0:
+        number *= 100.0  # cell formatted as percent (0,85 = 85 %)
+    return round(number, 4) if number <= 99.9 else None
+
+
+def _header_role(cell):
+    key = re.sub(r"[^a-z0-9]+", "", _fold(cell))
+    for role, names in _TARGET_HEADERS.items():
+        if key in names:
+            return role
+    if key.startswith("target") or key.startswith("cilj"):
+        return "target"
+    return None
+
+
+def parse_iwon_targets(values, default_year=None):
+    """Targets from a hand-made sheet -> long table Year, CW, Project, Process, Target_OEE.
+
+    Understands
+    * long layout: one row per week (Year/Godina, CW/KW/Nedelja, Project, Process, Target/Cilj …)
+    * wide layout: one row per project+process, one column per week (CW1 … CW53 or 1 … 53)
+    The header may be anywhere in the first 10 rows. Values may be 85, '85,5', '85 %' or a
+    percent-formatted 0,85. Returns (DataFrame, info) - info explains what was read and skipped.
+    """
+    columns = ["Year", "CW", "Project", "Process", "Target_OEE", "Sheet_Row"]
+    info = {"format": "nepoznat", "header_row": None, "header": [], "rows": 0, "used": 0, "skipped": []}
+    if not values:
+        return pd.DataFrame(columns=columns), info
+    best = None
+    for index, row in enumerate(values[:10]):
+        roles = [_header_role(c) for c in row]
+        week_cols = {i: _week_number(c) for i, c in enumerate(row)
+                     if roles[i] is None and str(c).strip() and _week_number(c)}
+        score = sum(1 for r in roles if r) + (3 if len(week_cols) >= 4 else 0)
+        if best is None or score > best[0]:
+            best = (score, index, roles, week_cols)
+    score, header_index, roles, week_cols = best
+    header = [str(c).strip() for c in values[header_index]]
+    info.update({"header_row": header_index + 1, "header": [h for h in header if h]})
+    pos = {}
+    for i, role in enumerate(roles):
+        if role and role not in pos:
+            pos[role] = i
+    wide = len(week_cols) >= 4 and "project" in pos
+    long = not wide and {"cw", "project", "target"} <= set(pos)
+    if not wide and not long:
+        info["skipped"].append("Nisu prepoznate kolone. Potrebno: projekat, proces, nedelja (CW) i cilj, "
+                               "ili projekat/proces i kolone CW1…CW53.")
+        return pd.DataFrame(columns=columns), info
+    info["format"] = "po kolonama (CW1…CW53)" if wide else "po redovima"
+    header_year = next((int(c) for c in header if re.fullmatch(r"20\d\d", str(c).strip())), None)
+    fallback_year = header_year or default_year
+    records = []
+
+    def cell(row, i):
+        return row[i] if i is not None and i < len(row) else ""
+
+    for number, row in enumerate(values[header_index + 1:], start=header_index + 2):
+        if not any(str(c).strip() for c in row):
+            continue
+        info["rows"] += 1
+        project = str(cell(row, pos.get("project"))).strip()
+        process = str(cell(row, pos.get("process"))).strip()
+        raw_year = cell(row, pos.get("year"))
+        try:
+            year = int(float(str(raw_year).replace(",", "."))) if str(raw_year).strip() else fallback_year
+        except ValueError:
+            year = fallback_year
+        if not project:
+            info["skipped"].append(f"red {number}: nema projekta")
+            continue
+        if not year or not (2000 <= int(year) <= 2100):
+            info["skipped"].append(f"red {number}: nema godine")
+            continue
+        if wide:
+            for i, cw in week_cols.items():
+                target = parse_target_value(cell(row, i))
+                if target is not None:
+                    records.append({"Year": int(year), "CW": cw, "Project": project, "Process": process,
+                                    "Target_OEE": target, "Sheet_Row": number})
+        else:
+            cw = _week_number(cell(row, pos.get("cw")))
+            target = parse_target_value(cell(row, pos.get("target")))
+            if cw is None:
+                info["skipped"].append(f"red {number}: nedelja '{cell(row, pos.get('cw'))}' nije prepoznata")
+                continue
+            if target is None:
+                if str(cell(row, pos.get("target"))).strip():
+                    info["skipped"].append(f"red {number}: cilj '{cell(row, pos.get('target'))}' nije broj između 0 i 99,9")
+                continue
+            records.append({"Year": int(year), "CW": cw, "Project": project, "Process": process,
+                            "Target_OEE": target, "Sheet_Row": number})
+    df = pd.DataFrame(records, columns=columns)
+    if not df.empty:
+        df["_k"] = df["Project"].map(_alnum) + "|" + df["Process"].map(_alnum)
+        df = df.drop_duplicates(subset=["Year", "CW", "_k"], keep="last").drop(columns=["_k"]).reset_index(drop=True)
+    info["used"] = len(df)
+    return df, info
